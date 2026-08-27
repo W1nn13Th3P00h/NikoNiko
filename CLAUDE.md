@@ -78,7 +78,7 @@ Import Strava/Garmin, notifications, export FIT effectif, multi-coach, graphique
 - [x] Étape 0 — Socle du projet (scaffold Next.js, Tailwind, shadcn/ui, Supabase env/client/middleware, git init)
 - [x] Étape 1 — Modèle de données (migration SQL, RLS, seed appliqués au projet distant, types TS générés dans `lib/database.types.ts`)
 - [x] Étape 2 — Logique métier (`lib/paces.ts`, `lib/volume.ts`, 18 tests Vitest)
-- [x] Étape 3 — Authentification (magic link via `token_hash`/`verifyOtp`, protection des routes dans `proxy.ts`) — nécessite un réglage manuel ponctuel du template email dans le dashboard Supabase, voir README.md
+- [x] Étape 3 — Authentification (magic link via `token_hash`/`verifyOtp`, protection des routes dans `proxy.ts`, SMTP Resend configuré côté Supabase) — vérifié de bout en bout : connexion coach → `/admin`
 - [ ] Étape 4 — Admin : athlètes
 - [ ] Étape 5 — Admin : calendrier
 - [ ] Étape 6 — Admin : éditeur de séance + bibliothèque

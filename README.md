@@ -15,8 +15,9 @@ Ouvrir [http://localhost:3000](http://localhost:3000). Les variables d'environne
 
 ## Configuration Supabase requise (une fois, dans le dashboard)
 
-Le magic link utilise `token_hash` + `verifyOtp` (pas le flow OAuth PKCE), ce qui demande deux réglages manuels dans le dashboard Supabase — pas automatisables proprement via la CLI sans risquer d'écraser d'autres réglages du projet (`supabase config push` réécrit tout `config.toml`, y compris des valeurs de dev comme la limite de 2 emails/heure) :
+Le magic link utilise `token_hash` + `verifyOtp` (pas le flow OAuth PKCE), ce qui demande des réglages manuels dans le dashboard Supabase — pas automatisables proprement via la CLI sans risquer d'écraser d'autres réglages du projet (`supabase config push` réécrit tout `config.toml`, y compris des valeurs de dev comme la limite de 2 emails/heure) :
 
+0. **SMTP personnalisé (obligatoire depuis juin 2026)** : les nouveaux projets Supabase gratuits ne permettent pas d'éditer les templates email sur le service par défaut (limité à 2 emails/heure, envoi restreint aux emails de l'équipe du projet). Ce projet utilise [Resend](https://resend.com) (palier gratuit, 3000 emails/mois) — clé API dans **Authentication → Emails → SMTP Settings** (host `smtp.resend.com`, port `465`, user `resend`, sender `onboarding@resend.dev` tant qu'aucun domaine n'est vérifié).
 1. **Authentication → Emails → Magic Link** : remplacer le contenu du bouton/lien pour qu'il pointe vers `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/apres-connexion` au lieu de `{{ .ConfirmationURL }}`.
 2. **Authentication → URL Configuration** : Site URL = `http://localhost:3000` en dev (à changer pour l'URL Vercel une fois déployé), et ajouter cette URL aux Redirect URLs autorisées.
 
