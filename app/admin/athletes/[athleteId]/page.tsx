@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import { notFound } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { toPerformanceReference } from "@/lib/mappers";
+import { nowInParis } from "@/lib/date";
 import {
   DISTANCE_LABELS,
   PERFORMANCE_TYPE_LABELS,
@@ -66,7 +67,7 @@ export default async function AthleteDetailPage({
       .from("competition")
       .select("*")
       .eq("athlete_id", athleteId)
-      .gte("date", format(new Date(), "yyyy-MM-dd"))
+      .gte("date", format(nowInParis(), "yyyy-MM-dd"))
       .order("date"),
     supabase.from("athlete_note").select("contenu").eq("athlete_id", athleteId).maybeSingle(),
   ]);

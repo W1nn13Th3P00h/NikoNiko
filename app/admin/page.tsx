@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { computeSeanceVolume } from "@/lib/volume";
 import { toBlocSeanceInput, toPerformanceReference } from "@/lib/mappers";
 import type { PerformanceReference } from "@/lib/paces";
+import { nowInParis } from "@/lib/date";
 import {
   Table,
   TableBody,
@@ -17,7 +18,7 @@ import { RpeBadge } from "./_components/rpe-badge";
 export default async function AdminAthleteListPage() {
   const supabase = await createClient();
 
-  const now = new Date();
+  const now = nowInParis();
   const weekStart = format(startOfWeek(now, { weekStartsOn: 1 }), "yyyy-MM-dd");
   const weekEnd = format(endOfWeek(now, { weekStartsOn: 1 }), "yyyy-MM-dd");
   const today = format(now, "yyyy-MM-dd");
