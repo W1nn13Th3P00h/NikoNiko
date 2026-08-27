@@ -6,9 +6,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="min-h-dvh">
       <header className="flex items-center justify-between border-b px-6 py-3">
-        <Link href="/admin" className="font-semibold">
-          App Coaching — Coach
-        </Link>
+        <div className="flex items-center gap-6">
+          <Link href="/admin" className="font-semibold">
+            App Coaching — Coach
+          </Link>
+          <nav className="flex gap-4 text-sm">
+            <Link href="/admin" className="hover:underline">
+              Athlètes
+            </Link>
+            <Link href="/admin/bibliotheque" className="hover:underline">
+              Bibliothèque
+            </Link>
+            <Link href="/admin/retours" className="hover:underline">
+              Retours
+            </Link>
+          </nav>
+        </div>
         <form action={signOut}>
           <Button type="submit" variant="ghost" size="sm">
             Se déconnecter
