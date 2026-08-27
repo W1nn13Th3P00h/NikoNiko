@@ -90,30 +90,25 @@ async function copySeanceWithBlocs(
   }
 }
 
-export async function createCustomSeance(
-  athleteId: string,
-  date: string,
-  formData: FormData
-) {
-  const titre = formData.get("titre");
-  const type = formData.get("type");
-  const objectif = formData.get("objectif");
-
-  if (typeof titre !== "string" || titre.trim() === "" || typeof type !== "string") {
-    return;
-  }
-
+// Creates a placeholder séance with no blocs yet; the coach immediately
+// lands in the block-by-block editor to define it (see
+// app/admin/athletes/[athleteId]/seances/[seanceId]).
+export async function createBlankSeance(athleteId: string, date: string) {
   const supabase = await createClient();
-  await supabase.from("seance").insert({
-    titre: titre.trim(),
-    type: type as Database["public"]["Enums"]["seance_type"],
-    objectif: typeof objectif === "string" && objectif.trim() !== "" ? objectif.trim() : null,
-    est_modele: false,
-    athlete_id: athleteId,
-    date_prevue: date,
-  });
+  const { data } = await supabase
+    .from("seance")
+    .insert({
+      titre: "Nouvelle séance",
+      type: "endurance",
+      est_modele: false,
+      athlete_id: athleteId,
+      date_prevue: date,
+    })
+    .select("id")
+    .single();
 
   revalidatePath(`/admin/athletes/${athleteId}/calendrier`);
+  return data?.id ?? null;
 }
 
 export async function applyLibrarySeance(

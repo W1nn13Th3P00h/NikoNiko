@@ -39,6 +39,7 @@ app/                    routes (App Router)
     page.tsx             liste des athlètes (volume semaine, dernier RPE, prochaine compét)
     athletes/[athleteId]/ fiche athlète (zones calculées, perfs, compétitions, notes)
       calendrier/          vue mois/semaine, drag and drop, ajout (bibliothèque/custom), duplication de semaine
+      seances/[seanceId]/  éditeur bloc par bloc (brouillon client, sauvegarde en "remplace tout")
   mon-plan/              parcours athlète, protégé
 components/ui/          composants shadcn/ui
 lib/
@@ -87,7 +88,7 @@ Import Strava/Garmin, notifications, export FIT effectif, multi-coach, graphique
 - [x] Étape 3 — Authentification (magic link via `token_hash`/`verifyOtp`, protection des routes dans `proxy.ts`, SMTP Resend configuré côté Supabase) — vérifié de bout en bout : connexion coach → `/admin`
 - [x] Étape 4 — Admin : athlètes (liste `/admin`, fiche `/admin/athletes/[athleteId]` avec zones calculées en clair et notes coach éditables)
 - [x] Étape 5 — Admin : calendrier (`/admin/athletes/[athleteId]/calendrier`, vues mois/semaine, drag and drop, ajout bibliothèque/custom, duplication de semaine)
-- [ ] Étape 6 — Admin : éditeur de séance + bibliothèque
+- [~] Étape 6 — Éditeur de séance fait (`/admin/athletes/[athleteId]/seances/[seanceId]`, blocs imbriqués, réordonnancement, duplication, preview allures réelles, "enregistrer aussi dans la bibliothèque") ; reste la vue Bibliothèque (liste filtrable/recherche) et la vue Retours
 - [ ] Étape 7 — Athlète (`/mon-plan`)
 - [ ] Étape 8 — QA responsive + finalisation
 

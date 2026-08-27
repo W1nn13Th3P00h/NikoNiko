@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -12,7 +13,6 @@ import type { Database } from "@/lib/database.types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -30,7 +30,7 @@ import {
 import { RpeBadge } from "@/app/admin/_components/rpe-badge";
 import {
   applyLibrarySeance,
-  createCustomSeance,
+  createBlankSeance,
   deleteSeance,
   duplicateWeek,
   moveSeanceDate,
@@ -220,7 +220,12 @@ export function CalendarView({
                               className="group flex flex-col gap-0.5 rounded border bg-muted/50 px-1.5 py-1 text-xs"
                             >
                               <div className="flex items-start justify-between gap-1">
-                                <span className="font-medium">{s.titre}</span>
+                                <Link
+                                  href={`/admin/athletes/${athlete.id}/seances/${s.id}`}
+                                  className="font-medium hover:underline"
+                                >
+                                  {s.titre}
+                                </Link>
                                 <button
                                   type="button"
                                   onClick={() => void deleteSeance(s.id, athlete.id)}
@@ -296,8 +301,8 @@ function AddSeanceDialog({
   mode: "bibliotheque" | "custom";
   onModeChange: (mode: "bibliotheque" | "custom") => void;
 }) {
+  const router = useRouter();
   const [selectedLibraryId, setSelectedLibraryId] = useState<string>("");
-  const [selectedType, setSelectedType] = useState<SeanceType>("endurance");
 
   return (
     <Dialog open={date !== null} onOpenChange={onOpenChange}>
@@ -332,7 +337,13 @@ function AddSeanceDialog({
             }}
             className="flex flex-col gap-3"
           >
-            <Select value={selectedLibraryId} onValueChange={(v) => setSelectedLibraryId(v ?? "")}>
+            <Select
+              value={selectedLibraryId}
+              onValueChange={(v) => setSelectedLibraryId(v ?? "")}
+              items={Object.fromEntries(
+                librarySeances.map((s) => [s.id, `${s.titre} (${SEANCE_TYPE_LABELS[s.type]})`])
+              )}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Choisir une séance de bibliothèque" />
               </SelectTrigger>
@@ -349,44 +360,23 @@ function AddSeanceDialog({
             </Button>
           </form>
         ) : (
-          <form
-            action={async (formData: FormData) => {
-              if (!date) return;
-              await createCustomSeance(athleteId, date, formData);
-              onOpenChange(false);
-            }}
-            className="flex flex-col gap-3"
-          >
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="titre">Titre</Label>
-              <Input id="titre" name="titre" required />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="type">Type</Label>
-              <Select
-                value={selectedType}
-                onValueChange={(v) => setSelectedType(v as SeanceType)}
-                name="type"
-              >
-                <SelectTrigger id="type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(SEANCE_TYPE_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <input type="hidden" name="type" value={selectedType} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="objectif">Objectif (une phrase)</Label>
-              <Textarea id="objectif" name="objectif" rows={2} />
-            </div>
-            <Button type="submit">Ajouter</Button>
-          </form>
+          <div className="flex flex-col gap-3">
+            <p className="text-muted-foreground text-sm">
+              Une séance custom se construit bloc par bloc (allures, distances,
+              récupérations) dans l&apos;éditeur.
+            </p>
+            <Button
+              onClick={async () => {
+                if (!date) return;
+                const newSeanceId = await createBlankSeance(athleteId, date);
+                if (newSeanceId) {
+                  router.push(`/admin/athletes/${athleteId}/seances/${newSeanceId}`);
+                }
+              }}
+            >
+              Créer et ouvrir l&apos;éditeur
+            </Button>
+          </div>
         )}
       </DialogContent>
     </Dialog>
@@ -431,7 +421,11 @@ function DuplicateWeekDialog({
         >
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="target-athlete">Athlète cible</Label>
-            <Select value={targetAthleteId} onValueChange={(v) => setTargetAthleteId(v ?? sourceAthleteId)}>
+            <Select
+              value={targetAthleteId}
+              onValueChange={(v) => setTargetAthleteId(v ?? sourceAthleteId)}
+              items={Object.fromEntries(allAthletes.map((a) => [a.id, `${a.prenom} ${a.nom}`]))}
+            >
               <SelectTrigger id="target-athlete">
                 <SelectValue />
               </SelectTrigger>
