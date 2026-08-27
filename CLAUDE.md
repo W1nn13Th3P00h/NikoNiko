@@ -55,7 +55,8 @@ supabase/migrations/     migrations SQL (schéma + RLS + seed)
 - **`cible_rpe`** reste un entier unique 1-10 (pas de min/max). Le coach note parfois "RE 6/7" sur le papier, mais ça se résout en une seule valeur saisie (ex: 7), pas une plage stockée.
 - **Contrainte export FIT (post-V1)** : chaque colonne de `bloc_seance` est pensée pour être traduisible directement en étape de workout FIT (type d'étape, condition de fin en durée/distance, cible en allure ou FC avec bornes). Aucune donnée structurante en texte libre. Voir [README.md](./README.md).
 - **Zones d'allure et de FC** : logique isolée dans `lib/paces.ts`, coefficients dans un objet de config exporté et documenté (ajustable sans relire la logique). Formule de Riegel pour les équivalences entre distances, performance réelle la plus récente comme base, 5k/10k préférés au marathon pour estimer le seuil.
-- **Volume d'une séance** : calculé automatiquement depuis les blocs (distance totale estimée en km, durée totale en minutes), avec conversion temps → distance via l'allure cible de l'athlète quand un bloc est en mode temps. Logique isolée dans `lib/volume.ts`.
+- **Volume d'une séance** : calculé automatiquement depuis les blocs (distance totale estimée en km, durée totale en minutes), avec conversion temps ↔ distance dans les deux sens via l'allure cible de l'athlète (milieu de la zone visée). Logique isolée dans `lib/volume.ts`. Un flag `estimationComplete` redescend à `false` quand un bloc visait une zone d'allure/FC mais que l'athlète n'a aucune performance de référence — pas quand la cible est `libre`/`rpe`, ce qui est un cas normal.
+- **Sélection de la performance de référence** (`lib/paces.ts`) : parmi les performances `reel`, on prend d'abord la distance la plus fiable disponible (5k/10k > semi > marathon), puis la plus récente à fiabilité égale. Un marathon récent ne prime donc pas sur un 10k plus ancien mais plus fiable — la fiche athlète affiche la performance retenue pour que ce soit vérifiable en un coup d'œil.
 
 ## Sécurité
 
@@ -71,8 +72,8 @@ Import Strava/Garmin, notifications, export FIT effectif, multi-coach, graphique
 ## État d'avancement
 
 - [x] Étape 0 — Socle du projet (scaffold Next.js, Tailwind, shadcn/ui, Supabase env/client/middleware, git init)
-- [ ] Étape 1 — Modèle de données (migrations SQL, types TS, seed)
-- [ ] Étape 2 — Logique métier (`lib/paces.ts`, `lib/volume.ts`, tests Vitest)
+- [~] Étape 1 — Modèle de données : migration SQL et seed écrits (`supabase/migrations/`, `supabase/seed.sql`), en attente du lien CLI vers le projet Supabase distant pour les appliquer et générer les types TS
+- [x] Étape 2 — Logique métier (`lib/paces.ts`, `lib/volume.ts`, 18 tests Vitest)
 - [ ] Étape 3 — Authentification (magic link, protection des routes)
 - [ ] Étape 4 — Admin : athlètes
 - [ ] Étape 5 — Admin : calendrier
