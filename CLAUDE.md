@@ -72,7 +72,7 @@ Import Strava/Garmin, notifications, export FIT effectif, multi-coach, graphique
 ## État d'avancement
 
 - [x] Étape 0 — Socle du projet (scaffold Next.js, Tailwind, shadcn/ui, Supabase env/client/middleware, git init)
-- [~] Étape 1 — Modèle de données : migration SQL et seed écrits (`supabase/migrations/`, `supabase/seed.sql`), en attente du lien CLI vers le projet Supabase distant pour les appliquer et générer les types TS
+- [x] Étape 1 — Modèle de données (migration SQL, RLS, seed appliqués au projet distant, types TS générés dans `lib/database.types.ts`)
 - [x] Étape 2 — Logique métier (`lib/paces.ts`, `lib/volume.ts`, 18 tests Vitest)
 - [ ] Étape 3 — Authentification (magic link, protection des routes)
 - [ ] Étape 4 — Admin : athlètes
