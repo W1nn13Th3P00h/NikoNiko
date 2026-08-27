@@ -42,8 +42,8 @@ lib/
 utils/supabase/
   client.ts              client Supabase navigateur
   server.ts               client Supabase Server Components / Server Actions
-  middleware.ts           rafraîchissement de session (appelé par middleware.ts racine)
-middleware.ts            wiring Next.js du rafraîchissement de session Supabase
+  middleware.ts           rafraîchissement de session (appelé par proxy.ts racine)
+proxy.ts                 wiring Next.js du rafraîchissement de session Supabase (convention "proxy", ex-middleware.ts)
 supabase/migrations/     migrations SQL (schéma + RLS + seed)
 ```
 
