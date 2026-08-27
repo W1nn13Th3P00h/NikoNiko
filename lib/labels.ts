@@ -31,6 +31,19 @@ export const CIBLE_TYPE_LABELS: Record<CibleType, string> = {
   libre: "Libre",
 };
 
+export const RPE_LABELS: Record<number, string> = {
+  1: "Très facile",
+  2: "Facile",
+  3: "Facile +",
+  4: "Modéré",
+  5: "Modéré +",
+  6: "Soutenu",
+  7: "Difficile",
+  8: "Très difficile",
+  9: "Quasi maximal",
+  10: "Maximal",
+};
+
 export const SEANCE_TYPE_LABELS: Record<SeanceType, string> = {
   endurance: "Endurance",
   seuil: "Seuil",

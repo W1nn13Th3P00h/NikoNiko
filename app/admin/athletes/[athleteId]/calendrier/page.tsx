@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { nowInParis } from "@/lib/date";
 import { toPerformanceReference } from "@/lib/mappers";
-import { getMonthGridWeeks, getWeekGridDays } from "./_lib/grid";
+import { getMonthGridWeeks, getWeekGridDays } from "@/lib/calendar-grid";
 import { CalendarView } from "./_components/calendar-view";
 
 export default async function AthleteCalendarPage({
