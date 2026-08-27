@@ -1,15 +1,9 @@
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { createClient } from "@/utils/supabase/server";
-import { SEANCE_TYPE_LABELS } from "@/lib/labels";
+import { RETOUR_STATUT_LABELS, SEANCE_TYPE_LABELS } from "@/lib/labels";
 import { Card, CardContent } from "@/components/ui/card";
 import { RpeBadge } from "../_components/rpe-badge";
-
-const STATUT_LABELS = {
-  fait: "Fait",
-  partiel: "Partiel",
-  non_fait: "Non fait",
-} as const;
 
 export default async function RetoursPage() {
   const supabase = await createClient();
@@ -45,7 +39,7 @@ export default async function RetoursPage() {
                     ? ` · ${format(new Date(r.seance.date_prevue), "dd MMMM yyyy", { locale: fr })}`
                     : ""}
                   {" · "}
-                  {STATUT_LABELS[r.statut]}
+                  {RETOUR_STATUT_LABELS[r.statut]}
                   {r.duree_reelle_secondes ? ` · ${Math.round(r.duree_reelle_secondes / 60)} min` : ""}
                   {r.distance_reelle_metres
                     ? ` · ${(r.distance_reelle_metres / 1000).toFixed(1)} km`

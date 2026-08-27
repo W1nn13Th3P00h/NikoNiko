@@ -47,6 +47,11 @@ app/                    routes (App Router)
     _lib/draft.ts                   type DraftBloc + helpers (brouillon client, jamais persisté tel quel)
     _lib/seance-actions.ts           saveSeance() : remplace tous les blocs plutôt qu'un diff incrémental
   mon-plan/              parcours athlète, protégé
+    page.tsx               accueil : séance du jour ou prochaine séance, countdown compét. A, volume de la semaine
+    calendrier/            lecture seule : liste verticale semaine (mobile) / grille mois (desktop, via CSS)
+    seances/[seanceId]/    détail (blocs en clair, allures réelles) + formulaire de retour (3 taps max)
+    _lib/current-athlete.ts résout la session vers la ligne athlete (auth_user_id)
+    _components/bloc-list.tsx rendu lecture seule des blocs, contraste fort / valeurs en grand
 components/ui/          composants shadcn/ui
 lib/
   paces.ts              calcul des zones d'allure et de FC (Riegel + config des coefficients)
@@ -95,7 +100,7 @@ Import Strava/Garmin, notifications, export FIT effectif, multi-coach, graphique
 - [x] Étape 4 — Admin : athlètes (liste `/admin`, fiche `/admin/athletes/[athleteId]` avec zones calculées en clair et notes coach éditables)
 - [x] Étape 5 — Admin : calendrier (`/admin/athletes/[athleteId]/calendrier`, vues mois/semaine, drag and drop, ajout bibliothèque/custom, duplication de semaine)
 - [x] Étape 6 — Éditeur de séance (`/admin/athletes/[athleteId]/seances/[seanceId]`), Bibliothèque (`/admin/bibliotheque`, filtre type + recherche titre — pas de filtre "tag" : ce champ n'existe pas dans le modèle de données malgré la mention dans le prompt initial), Retours (`/admin/retours`, chronologique, 100 derniers)
-- [ ] Étape 7 — Athlète (`/mon-plan`)
+- [x] Étape 7 — Athlète (`/mon-plan`)
 - [ ] Étape 8 — QA responsive + finalisation
 
 <!-- BEGIN:nextjs-agent-rules -->

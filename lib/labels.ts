@@ -8,6 +8,7 @@ type SeanceType = Database["public"]["Enums"]["seance_type"];
 type BlocRole = Database["public"]["Enums"]["bloc_role"];
 type ModeDuree = Database["public"]["Enums"]["mode_duree"];
 type CibleType = Database["public"]["Enums"]["cible_type"];
+type RetourStatut = Database["public"]["Enums"]["retour_statut"];
 
 export const BLOC_ROLE_LABELS: Record<BlocRole, string> = {
   echauffement: "Échauffement",
@@ -42,6 +43,12 @@ export const RPE_LABELS: Record<number, string> = {
   8: "Très difficile",
   9: "Quasi maximal",
   10: "Maximal",
+};
+
+export const RETOUR_STATUT_LABELS: Record<RetourStatut, string> = {
+  fait: "Fait",
+  partiel: "Partiel",
+  non_fait: "Non fait",
 };
 
 export const SEANCE_TYPE_LABELS: Record<SeanceType, string> = {
