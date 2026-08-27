@@ -87,6 +87,12 @@ export const DISTANCE_LABELS: Record<DistanceRef, string> = {
   marathon: "Marathon",
 };
 
+export const PERFORMANCE_TYPE_LABELS: Record<PerformanceType, string> = {
+  reel: "Réel",
+  estime: "Estimé",
+  objectif: "Objectif",
+};
+
 /** Heart-rate zone bounds as a percentage of FC max. */
 export const FC_ZONE_COEFFICIENTS: Record<ZoneAllure, { min: number; max: number }> = {
   z1_recup: { min: 60, max: 70 },

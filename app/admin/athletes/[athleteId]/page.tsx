@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { toPerformanceReference } from "@/lib/mappers";
 import {
   DISTANCE_LABELS,
+  PERFORMANCE_TYPE_LABELS,
   ZONE_LABELS,
   computeHeartRateZones,
   computePaceZones,
@@ -143,7 +144,7 @@ export default async function AthleteDetailPage({
                       <TableCell>{DISTANCE_LABELS[row.distance]}</TableCell>
                       <TableCell>{formatDurationHMS(row.temps_secondes)}</TableCell>
                       <TableCell>{format(new Date(row.date_perf), "dd/MM/yyyy")}</TableCell>
-                      <TableCell className="capitalize">{row.type}</TableCell>
+                      <TableCell>{PERFORMANCE_TYPE_LABELS[row.type]}</TableCell>
                       <TableCell>
                         {isBase && <Badge variant="secondary">Référence retenue</Badge>}
                       </TableCell>
