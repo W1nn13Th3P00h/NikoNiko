@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { toPerformanceReference } from "@/lib/mappers";
@@ -83,11 +84,19 @@ export default async function AthleteDetailPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold">
-          {athlete.prenom} {athlete.nom}
-        </h1>
-        <p className="text-muted-foreground text-sm">{athlete.email}</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">
+            {athlete.prenom} {athlete.nom}
+          </h1>
+          <p className="text-muted-foreground text-sm">{athlete.email}</p>
+        </div>
+        <Link
+          href={`/admin/athletes/${athlete.id}/calendrier`}
+          className="text-sm underline"
+        >
+          Voir le calendrier
+        </Link>
       </div>
 
       <Card>

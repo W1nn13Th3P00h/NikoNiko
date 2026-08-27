@@ -38,12 +38,15 @@ app/                    routes (App Router)
   admin/                parcours coach, protégé
     page.tsx             liste des athlètes (volume semaine, dernier RPE, prochaine compét)
     athletes/[athleteId]/ fiche athlète (zones calculées, perfs, compétitions, notes)
+      calendrier/          vue mois/semaine, drag and drop, ajout (bibliothèque/custom), duplication de semaine
   mon-plan/              parcours athlète, protégé
 components/ui/          composants shadcn/ui
 lib/
   paces.ts              calcul des zones d'allure et de FC (Riegel + config des coefficients)
   volume.ts             calcul du volume (distance/durée) d'une séance à partir de ses blocs
   mappers.ts             conversion lignes Supabase (snake_case) -> types lib/paces, lib/volume
+  date.ts                nowInParis() : "aujourd'hui" ancré Europe/Paris, jamais new Date() nu
+  labels.ts               labels français pour les enums bruts sans lib dédiée (ex: seance_type)
   paces.test.ts
   volume.test.ts
 utils/supabase/
@@ -83,7 +86,7 @@ Import Strava/Garmin, notifications, export FIT effectif, multi-coach, graphique
 - [x] Étape 2 — Logique métier (`lib/paces.ts`, `lib/volume.ts`, 18 tests Vitest)
 - [x] Étape 3 — Authentification (magic link via `token_hash`/`verifyOtp`, protection des routes dans `proxy.ts`, SMTP Resend configuré côté Supabase) — vérifié de bout en bout : connexion coach → `/admin`
 - [x] Étape 4 — Admin : athlètes (liste `/admin`, fiche `/admin/athletes/[athleteId]` avec zones calculées en clair et notes coach éditables)
-- [ ] Étape 5 — Admin : calendrier
+- [x] Étape 5 — Admin : calendrier (`/admin/athletes/[athleteId]/calendrier`, vues mois/semaine, drag and drop, ajout bibliothèque/custom, duplication de semaine)
 - [ ] Étape 6 — Admin : éditeur de séance + bibliothèque
 - [ ] Étape 7 — Athlète (`/mon-plan`)
 - [ ] Étape 8 — QA responsive + finalisation

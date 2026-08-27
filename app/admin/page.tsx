@@ -110,6 +110,7 @@ export default async function AdminAthleteListPage() {
             <TableHead>Prochaine compétition</TableHead>
             <TableHead>Volume semaine en cours</TableHead>
             <TableHead>Dernier retour</TableHead>
+            <TableHead></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -146,6 +147,14 @@ export default async function AdminAthleteListPage() {
                 </TableCell>
                 <TableCell>
                   <RpeBadge rpe={lastRetour?.rpe ?? null} />
+                </TableCell>
+                <TableCell>
+                  <Link
+                    href={`/admin/athletes/${athlete.id}/calendrier`}
+                    className="text-sm hover:underline"
+                  >
+                    Calendrier
+                  </Link>
                 </TableCell>
               </TableRow>
             );
