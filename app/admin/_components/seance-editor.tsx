@@ -27,7 +27,7 @@ import {
   blankBloc,
   draftToBlocSeanceInput,
 } from "../_lib/draft";
-import { saveSeance } from "../actions";
+import { saveSeance } from "../_lib/seance-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -75,11 +75,18 @@ export function SeanceEditor({
   seance,
   initialBlocs,
   performances,
+  redirectPath,
+  allowSaveAsLibraryCopy,
 }: {
-  athlete: { id: string; prenom: string; nom: string };
+  // Null when editing a library template directly (no athlete context, so
+  // no real pace to preview against — realPacePreview falls back to
+  // showing the zone name with a "pas de référence" hint).
+  athlete: { id: string; prenom: string; nom: string } | null;
   seance: SeanceRow;
   initialBlocs: DraftBloc[];
   performances: PerformanceReference[];
+  redirectPath: string;
+  allowSaveAsLibraryCopy: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -155,7 +162,6 @@ export function SeanceEditor({
     startTransition(async () => {
       await saveSeance(
         seance.id,
-        athlete.id,
         {
           titre,
           type,
@@ -163,9 +169,9 @@ export function SeanceEditor({
           consignes: consignes.trim() || null,
         },
         blocs,
-        saveToLibrary
+        { saveAsLibraryCopy: allowSaveAsLibraryCopy && saveToLibrary }
       );
-      router.push(`/admin/athletes/${athlete.id}/calendrier`);
+      router.push(redirectPath);
     });
   }
 
@@ -174,7 +180,7 @@ export function SeanceEditor({
       <div>
         <h1 className="text-2xl font-semibold">Édition de séance</h1>
         <p className="text-muted-foreground text-sm">
-          {athlete.prenom} {athlete.nom}
+          {athlete ? `${athlete.prenom} ${athlete.nom}` : "Bibliothèque"}
           {seance.date_prevue ? ` — ${seance.date_prevue}` : ""}
         </p>
       </div>
@@ -275,15 +281,19 @@ export function SeanceEditor({
 
       <div className="fixed inset-x-0 bottom-0 flex items-center justify-between border-t bg-background px-6 py-3">
         <div className="flex items-center gap-2">
-          <Checkbox
-            id="save-to-library"
-            checked={saveToLibrary}
-            onCheckedChange={(c) => setSaveToLibrary(c === true)}
-          />
-          <Label htmlFor="save-to-library">Enregistrer aussi dans la bibliothèque</Label>
+          {allowSaveAsLibraryCopy && (
+            <>
+              <Checkbox
+                id="save-to-library"
+                checked={saveToLibrary}
+                onCheckedChange={(c) => setSaveToLibrary(c === true)}
+              />
+              <Label htmlFor="save-to-library">Enregistrer aussi dans la bibliothèque</Label>
+            </>
+          )}
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => router.push(`/admin/athletes/${athlete.id}/calendrier`)}>
+          <Button variant="outline" onClick={() => router.push(redirectPath)}>
             Annuler
           </Button>
           <Button onClick={handleSave} disabled={isPending}>

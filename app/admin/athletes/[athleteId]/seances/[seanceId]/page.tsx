@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { toPerformanceReference } from "@/lib/mappers";
-import { blocRowToDraft } from "./_lib/draft";
-import { SeanceEditor } from "./_components/seance-editor";
+import { blocRowToDraft } from "@/app/admin/_lib/draft";
+import { SeanceEditor } from "@/app/admin/_components/seance-editor";
 
 export default async function SeanceEditorPage({
   params,
@@ -37,6 +37,8 @@ export default async function SeanceEditorPage({
       seance={seance}
       initialBlocs={(blocRows ?? []).map(blocRowToDraft)}
       performances={(performanceRows ?? []).map(toPerformanceReference)}
+      redirectPath={`/admin/athletes/${athleteId}/calendrier`}
+      allowSaveAsLibraryCopy
     />
   );
 }

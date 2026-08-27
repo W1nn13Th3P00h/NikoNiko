@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import type { Database } from "@/lib/database.types";
-import type { DraftBloc } from "./_lib/draft";
+import type { DraftBloc } from "./draft";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 type SeanceType = Database["public"]["Enums"]["seance_type"];
@@ -68,9 +68,12 @@ async function replaceBlocs(supabase: SupabaseServerClient, seanceId: string, bl
   }
 }
 
+// Works for both an athlete's occurrence and a library template — both are
+// rows in the same `seance` table, editing them is identical. Only an
+// occurrence editor offers `saveAsLibraryCopy` (copying it into the
+// library); editing a template directly just saves it in place.
 export async function saveSeance(
   seanceId: string,
-  athleteId: string,
   fields: {
     titre: string;
     type: SeanceType;
@@ -78,7 +81,7 @@ export async function saveSeance(
     consignes: string | null;
   },
   blocs: DraftBloc[],
-  saveToLibrary: boolean
+  options?: { saveAsLibraryCopy?: boolean }
 ) {
   const supabase = await createClient();
 
@@ -94,7 +97,7 @@ export async function saveSeance(
 
   await replaceBlocs(supabase, seanceId, blocs);
 
-  if (saveToLibrary) {
+  if (options?.saveAsLibraryCopy) {
     const { data: librarySeance } = await supabase
       .from("seance")
       .insert({
@@ -112,6 +115,5 @@ export async function saveSeance(
     }
   }
 
-  revalidatePath(`/admin/athletes/${athleteId}/seances/${seanceId}`);
-  revalidatePath(`/admin/athletes/${athleteId}/calendrier`);
+  revalidatePath("/admin", "layout");
 }

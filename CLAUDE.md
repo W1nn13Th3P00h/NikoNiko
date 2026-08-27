@@ -39,9 +39,13 @@ app/                    routes (App Router)
     page.tsx             liste des athlètes (volume semaine, dernier RPE, prochaine compét)
     athletes/[athleteId]/ fiche athlète (zones calculées, perfs, compétitions, notes)
       calendrier/          vue mois/semaine, drag and drop, ajout (bibliothèque/custom), duplication de semaine
-      seances/[seanceId]/  éditeur bloc par bloc (brouillon client, sauvegarde en "remplace tout")
+      seances/[seanceId]/  page fine : charge la séance de CET athlète, délègue à _components/seance-editor.tsx
     bibliotheque/          liste filtrable (type, recherche titre) des séances est_modele=true
+      [seanceId]/           édition directe d'une séance de bibliothèque (même éditeur, sans athlète/allures réelles)
     retours/                liste chronologique de tous les retours (100 derniers)
+    _components/seance-editor.tsx  éditeur bloc par bloc partagé (athlète nullable, cf redirectPath/allowSaveAsLibraryCopy)
+    _lib/draft.ts                   type DraftBloc + helpers (brouillon client, jamais persisté tel quel)
+    _lib/seance-actions.ts           saveSeance() : remplace tous les blocs plutôt qu'un diff incrémental
   mon-plan/              parcours athlète, protégé
 components/ui/          composants shadcn/ui
 lib/

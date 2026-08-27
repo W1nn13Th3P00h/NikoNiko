@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import { SEANCE_TYPE_LABELS } from "@/lib/labels";
 import type { Database } from "@/lib/database.types";
@@ -46,8 +47,9 @@ export default async function BibliothequePage({
       <div>
         <h1 className="text-2xl font-semibold">Bibliothèque de séances</h1>
         <p className="text-muted-foreground text-sm">
-          Se remplit depuis l&apos;éditeur de séance (case &quot;enregistrer aussi dans la
-          bibliothèque&quot;) — pas de saisie séparée ici.
+          De nouvelles entrées arrivent depuis l&apos;éditeur de séance (case &quot;enregistrer
+          aussi dans la bibliothèque&quot;) — pas de formulaire de création séparé. Clique un
+          titre pour éditer une séance existante.
         </p>
       </div>
 
@@ -62,7 +64,9 @@ export default async function BibliothequePage({
               <CardContent className="flex items-center justify-between py-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">{s.titre}</span>
+                    <Link href={`/admin/bibliotheque/${s.id}`} className="font-medium hover:underline">
+                      {s.titre}
+                    </Link>
                     <Badge variant="secondary">{SEANCE_TYPE_LABELS[s.type]}</Badge>
                   </div>
                   {s.objectif && <p className="text-muted-foreground text-sm">{s.objectif}</p>}
