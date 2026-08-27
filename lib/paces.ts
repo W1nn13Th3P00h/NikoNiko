@@ -71,6 +71,22 @@ export const PACE_ZONE_COEFFICIENTS: Record<ZoneAllure, { min: number | null; ma
   z6_anaerobie: { min: null, max: 0.88 },
 };
 
+export const ZONE_LABELS: Record<ZoneAllure, string> = {
+  z1_recup: "Z1 — Récupération",
+  z2_endurance: "Z2 — Endurance",
+  z3_marathon: "Z3 — Marathon",
+  z4_seuil: "Z4 — Seuil",
+  z5_vma: "Z5 — VMA",
+  z6_anaerobie: "Z6 — Anaérobie",
+};
+
+export const DISTANCE_LABELS: Record<DistanceRef, string> = {
+  "5k": "5 km",
+  "10k": "10 km",
+  semi: "Semi-marathon",
+  marathon: "Marathon",
+};
+
 /** Heart-rate zone bounds as a percentage of FC max. */
 export const FC_ZONE_COEFFICIENTS: Record<ZoneAllure, { min: number; max: number }> = {
   z1_recup: { min: 60, max: 70 },
@@ -171,4 +187,16 @@ export function formatPaceSecondsPerKm(secondsPerKm: number): string {
   const minutes = Math.floor(secondsPerKm / 60);
   const seconds = Math.round(secondsPerKm % 60);
   return `${minutes}:${String(seconds).padStart(2, "0")}/km`;
+}
+
+/** Formats a race/rest duration as "h:mm:ss" (or "m:ss" under an hour). */
+export function formatDurationHMS(totalSeconds: number): string {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = Math.round(totalSeconds % 60);
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }

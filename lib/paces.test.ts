@@ -3,6 +3,7 @@ import {
   computeHeartRateZones,
   computePaceZones,
   computeThresholdPaceSecondsPerKm,
+  formatDurationHMS,
   formatPaceSecondsPerKm,
   getAthletePaceZone,
   riegelEquivalentSeconds,
@@ -111,5 +112,16 @@ describe("formatPaceSecondsPerKm", () => {
     expect(formatPaceSecondsPerKm(255)).toBe("4:15/km");
     expect(formatPaceSecondsPerKm(180)).toBe("3:00/km");
     expect(formatPaceSecondsPerKm(65)).toBe("1:05/km");
+  });
+});
+
+describe("formatDurationHMS", () => {
+  it("formats under an hour as m:ss", () => {
+    expect(formatDurationHMS(3480)).toBe("58:00");
+    expect(formatDurationHMS(65)).toBe("1:05");
+  });
+
+  it("formats an hour or more as h:mm:ss", () => {
+    expect(formatDurationHMS(5700)).toBe("1:35:00");
   });
 });
