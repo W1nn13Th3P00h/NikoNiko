@@ -13,6 +13,13 @@ npm run dev
 
 Ouvrir [http://localhost:3000](http://localhost:3000). Les variables d'environnement Supabase sont dans `.env.local` (voir `.env.local.example`).
 
+## Configuration Supabase requise (une fois, dans le dashboard)
+
+Le magic link utilise `token_hash` + `verifyOtp` (pas le flow OAuth PKCE), ce qui demande deux réglages manuels dans le dashboard Supabase — pas automatisables proprement via la CLI sans risquer d'écraser d'autres réglages du projet (`supabase config push` réécrit tout `config.toml`, y compris des valeurs de dev comme la limite de 2 emails/heure) :
+
+1. **Authentication → Emails → Magic Link** : remplacer le contenu du bouton/lien pour qu'il pointe vers `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/apres-connexion` au lieu de `{{ .ConfirmationURL }}`.
+2. **Authentication → URL Configuration** : Site URL = `http://localhost:3000` en dev (à changer pour l'URL Vercel une fois déployé), et ajouter cette URL aux Redirect URLs autorisées.
+
 ## Tests
 
 ```bash

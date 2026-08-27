@@ -31,6 +31,10 @@ Pas de state manager global tant que le besoin n'est pas prouvé.
 
 ```
 app/                    routes (App Router)
+  login/                page + Server Action d'envoi du magic link
+  auth/confirm/         Route Handler qui échange token_hash contre une session
+  apres-connexion/      aiguille vers /admin ou /mon-plan selon profile.is_admin
+  actions/auth.ts        Server Action de déconnexion
   admin/                parcours coach, protégé
   mon-plan/              parcours athlète, protégé
 components/ui/          composants shadcn/ui
@@ -74,7 +78,7 @@ Import Strava/Garmin, notifications, export FIT effectif, multi-coach, graphique
 - [x] Étape 0 — Socle du projet (scaffold Next.js, Tailwind, shadcn/ui, Supabase env/client/middleware, git init)
 - [x] Étape 1 — Modèle de données (migration SQL, RLS, seed appliqués au projet distant, types TS générés dans `lib/database.types.ts`)
 - [x] Étape 2 — Logique métier (`lib/paces.ts`, `lib/volume.ts`, 18 tests Vitest)
-- [ ] Étape 3 — Authentification (magic link, protection des routes)
+- [x] Étape 3 — Authentification (magic link via `token_hash`/`verifyOtp`, protection des routes dans `proxy.ts`) — nécessite un réglage manuel ponctuel du template email dans le dashboard Supabase, voir README.md
 - [ ] Étape 4 — Admin : athlètes
 - [ ] Étape 5 — Admin : calendrier
 - [ ] Étape 6 — Admin : éditeur de séance + bibliothèque
