@@ -15,7 +15,7 @@ export function AthleteInfoForm({
   initial: {
     prenom: string;
     nom: string;
-    email: string;
+    email: string | null;
     dateNaissance: string | null;
     fcMax: number | null;
     fcRepos: number | null;
@@ -24,7 +24,7 @@ export function AthleteInfoForm({
 }) {
   const [prenom, setPrenom] = useState(initial.prenom);
   const [nom, setNom] = useState(initial.nom);
-  const [email, setEmail] = useState(initial.email);
+  const [email, setEmail] = useState(initial.email ?? "");
   const [dateNaissance, setDateNaissance] = useState(initial.dateNaissance ?? "");
   const [fcMax, setFcMax] = useState(initial.fcMax?.toString() ?? "");
   const [fcRepos, setFcRepos] = useState(initial.fcRepos?.toString() ?? "");
@@ -38,7 +38,7 @@ export function AthleteInfoForm({
       const result = await updateAthleteInfos(athleteId, {
         prenom,
         nom,
-        email,
+        email: email.trim() || null,
         dateNaissance: dateNaissance || null,
         fcMax: fcMax ? Number(fcMax) : null,
         fcRepos: fcRepos ? Number(fcRepos) : null,
@@ -64,7 +64,7 @@ export function AthleteInfoForm({
           <Input id="nom" value={nom} onChange={(e) => setNom(e.target.value)} />
         </div>
         <div className="flex flex-col gap-1.5 sm:col-span-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">Email (optionnel)</Label>
           <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
         <div className="flex flex-col gap-1.5">

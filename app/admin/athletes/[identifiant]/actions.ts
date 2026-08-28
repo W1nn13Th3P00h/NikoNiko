@@ -19,7 +19,7 @@ export async function updateAthleteInfos(
   data: {
     prenom: string;
     nom: string;
-    email: string;
+    email: string | null;
     dateNaissance: string | null;
     fcMax: number | null;
     fcRepos: number | null;
@@ -28,7 +28,6 @@ export async function updateAthleteInfos(
 ): Promise<{ error?: string }> {
   if (!data.prenom.trim()) return { error: "Prénom requis." };
   if (!data.nom.trim()) return { error: "Nom requis." };
-  if (!data.email.trim()) return { error: "Email requis." };
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -36,7 +35,7 @@ export async function updateAthleteInfos(
     .update({
       prenom: data.prenom.trim(),
       nom: data.nom.trim(),
-      email: data.email.trim(),
+      email: data.email?.trim() || null,
       date_naissance: data.dateNaissance,
       fc_max: data.fcMax,
       fc_repos: data.fcRepos,

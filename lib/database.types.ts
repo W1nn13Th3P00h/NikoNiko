@@ -45,7 +45,7 @@ export type Database = {
           auth_user_id: string | null
           created_at: string
           date_naissance: string | null
-          email: string
+          email: string | null
           fc_max: number | null
           fc_repos: number | null
           id: string
@@ -58,7 +58,7 @@ export type Database = {
           auth_user_id?: string | null
           created_at?: string
           date_naissance?: string | null
-          email: string
+          email?: string | null
           fc_max?: number | null
           fc_repos?: number | null
           id?: string
@@ -71,7 +71,7 @@ export type Database = {
           auth_user_id?: string | null
           created_at?: string
           date_naissance?: string | null
-          email?: string
+          email?: string | null
           fc_max?: number | null
           fc_repos?: number | null
           id?: string

@@ -94,7 +94,7 @@ export default async function AthleteDetailPage({
           <h1 className="text-2xl font-semibold">
             {athlete.prenom} {athlete.nom}
           </h1>
-          <p className="text-muted-foreground text-sm">{athlete.email}</p>
+          <p className="text-muted-foreground text-sm">{athlete.email ?? "Pas d'email renseigné"}</p>
         </div>
         <Link
           href={`/admin/athletes/${athlete.identifiant}/calendrier`}
