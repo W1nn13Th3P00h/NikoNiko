@@ -34,6 +34,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { saveAthleteNote } from "./actions";
+import { CredentialsForm } from "./_components/credentials-form";
 
 const ZONE_ORDER: ZoneAllure[] = [
   "z1_recup",
@@ -228,6 +229,19 @@ export default async function AthleteDetailPage({
               ))}
             </ul>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Connexion par identifiant</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground mb-3 text-sm">
+            Alternative au lien magique par email : utile si l&apos;athlète ne veut pas
+            gérer d&apos;email, ou tant que le domaine d&apos;envoi n&apos;est pas vérifié.
+          </p>
+          <CredentialsForm athleteId={athlete.id} currentIdentifiant={athlete.identifiant} />
         </CardContent>
       </Card>
 

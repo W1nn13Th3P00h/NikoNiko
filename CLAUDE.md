@@ -59,12 +59,14 @@ lib/
   mappers.ts             conversion lignes Supabase (snake_case) -> types lib/paces, lib/volume
   date.ts                nowInParis() : "aujourd'hui" ancré Europe/Paris, jamais new Date() nu
   labels.ts               labels français pour les enums bruts sans lib dédiée (ex: seance_type)
+  athlete-login.ts         mapping identifiant <-> email interne synthétique pour la connexion par code
   paces.test.ts
   volume.test.ts
 utils/supabase/
   client.ts              client Supabase navigateur
   server.ts               client Supabase Server Components / Server Actions
   middleware.ts           rafraîchissement de session (appelé par proxy.ts racine)
+  admin.ts                 client service_role (auth.admin.*), Server Actions only, jamais côté client
 proxy.ts                 wiring Next.js du rafraîchissement de session Supabase (convention "proxy", ex-middleware.ts)
 supabase/migrations/     migrations SQL (schéma + RLS + seed)
 ```
@@ -82,10 +84,14 @@ supabase/migrations/     migrations SQL (schéma + RLS + seed)
 
 ## Sécurité
 
-- Magic link Supabase Auth pour tout le monde.
+- Deux méthodes de connexion, au choix par athlète : magic link (email réel), ou identifiant + code défini par le coach. La seconde existe pour deux raisons : certains athlètes préfèrent ne pas gérer d'email pour ça, et elle contourne la limite Resend en mode test (voir README.md) tant qu'aucun domaine n'est vérifié.
+  - L'identifiant + code s'appuie sur un compte Supabase Auth classique avec un email interne synthétique (`identifiant@athlete.appcoaching.internal`, jamais résolu ni envoyé) et un mot de passe = le code — pas un système d'auth parallèle.
+  - Créé/modifié via `auth.admin.createUser`/`updateUserById` (`utils/supabase/admin.ts`, clé service_role, jamais exposée au client, jamais importée hors des Server Actions qui en ont besoin).
+  - Un athlete_id ne pointe que vers UN auth_user_id : configurer l'identifiant sur un athlète déjà lié à un email réel crée un nouveau compte et re-pointe le lien plutôt que d'écraser l'email réel en place (`setAthleteCredentials` vérifie si le compte lié est déjà un compte "interne" avant de décider update vs create).
 - RLS Postgres : un athlète ne voit que ses propres données, et ne peut écrire que dans `retour_seance` sur ses propres séances (occurrences, pas modèles).
 - Rôle admin porté par un champ sur le profil, pas par une liste d'emails en dur.
 - Policies RLS écrites explicitement et commentées dans les migrations.
+- Persistance de session : gérée nativement par les cookies `@supabase/ssr` (refresh token, pas d'expiration forcée côté projet) — aucun code custom nécessaire. Un test qui semble "se déconnecter tout seul" est probablement fait en navigation privée.
 
 ## Hors périmètre V1
 

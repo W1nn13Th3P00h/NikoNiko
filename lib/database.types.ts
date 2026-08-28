@@ -49,6 +49,7 @@ export type Database = {
           fc_max: number | null
           fc_repos: number | null
           id: string
+          identifiant: string | null
           nom: string
           prenom: string
         }
@@ -61,6 +62,7 @@ export type Database = {
           fc_max?: number | null
           fc_repos?: number | null
           id?: string
+          identifiant?: string | null
           nom: string
           prenom: string
         }
@@ -73,6 +75,7 @@ export type Database = {
           fc_max?: number | null
           fc_repos?: number | null
           id?: string
+          identifiant?: string | null
           nom?: string
           prenom?: string
         }
