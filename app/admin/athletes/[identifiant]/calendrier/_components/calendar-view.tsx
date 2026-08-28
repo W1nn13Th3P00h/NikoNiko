@@ -3,12 +3,21 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { format, parseISO } from "date-fns";
+import { addMonths, addWeeks, differenceInCalendarDays, format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { computeSeanceVolume } from "@/lib/volume";
 import { toBlocSeanceInput } from "@/lib/mappers";
-import type { PerformanceReference } from "@/lib/paces";
-import { RETOUR_STATUT_LABELS, SEANCE_TYPE_LABELS } from "@/lib/labels";
+import {
+  computePaceZones,
+  computeThresholdPaceSecondsPerKm,
+  formatPaceSecondsPerKm,
+  selectBasePerformance,
+  ZONE_SHORT_LABELS,
+  type PerformanceReference,
+  type ZoneAllure,
+} from "@/lib/paces";
+import { SEANCE_TYPE_LABELS } from "@/lib/labels";
+import { ZONE_COLORS, seanceTypeColor } from "@/lib/zone-colors";
 import type { Database } from "@/lib/database.types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +36,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { RpeBadge } from "@/app/admin/_components/rpe-badge";
 import {
   applyLibrarySeance,
   createBlankSeance,
@@ -37,6 +45,7 @@ import {
 } from "../actions";
 
 type SeanceType = Database["public"]["Enums"]["seance_type"];
+type RetourStatut = Database["public"]["Enums"]["retour_statut"];
 
 interface GridSeance {
   id: string;
@@ -51,7 +60,17 @@ type BlocRow = Database["public"]["Tables"]["bloc_seance"]["Row"];
 interface RetourRow {
   seance_id: string;
   rpe: number | null;
-  statut: Database["public"]["Enums"]["retour_statut"];
+  statut: RetourStatut;
+  distance_reelle_metres: number | null;
+  duree_reelle_secondes: number | null;
+}
+
+interface CompetitionRow {
+  id: string;
+  nom: string;
+  date: string;
+  objectif_temps_secondes: number | null;
+  priorite: Database["public"]["Enums"]["priorite_competition"];
 }
 
 interface AthleteRef {
@@ -69,6 +88,21 @@ interface LibrarySeanceRef {
   type: SeanceType;
 }
 
+const ZONE_ORDER: ZoneAllure[] = [
+  "z1_recup",
+  "z2_endurance",
+  "z3_marathon",
+  "z4_seuil",
+  "z5_vma",
+  "z6_anaerobie",
+];
+
+function formatDurationHM(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h > 0 ? `${h} h ${String(m).padStart(2, "0")}` : `${m} min`;
+}
+
 export function CalendarView({
   athlete,
   allAthletes,
@@ -77,8 +111,11 @@ export function CalendarView({
   seances,
   blocs,
   retours,
+  competitions,
+  nextCompetition,
   performances,
   view,
+  density,
   referenceDate,
   today,
 }: {
@@ -89,8 +126,11 @@ export function CalendarView({
   seances: GridSeance[];
   blocs: BlocRow[];
   retours: RetourRow[];
+  competitions: CompetitionRow[];
+  nextCompetition: { nom: string; date: string; priorite: string } | null;
   performances: PerformanceReference[];
   view: "mois" | "semaine";
+  density: "detaille" | "compact";
   referenceDate: string;
   today: string;
 }) {
@@ -107,6 +147,7 @@ export function CalendarView({
     seancesByDay.set(s.date_prevue, list);
   }
 
+  const competitionByDay = new Map(competitions.map((c) => [c.date, c]));
   const retourBySeanceId = new Map(retours.map((r) => [r.seance_id, r]));
   const blocsBySeanceId = new Map<string, BlocRow[]>();
   for (const b of blocs) {
@@ -115,84 +156,203 @@ export function CalendarView({
     blocsBySeanceId.set(b.seance_id, list);
   }
 
-  function weekVolume(week: string[]) {
+  function weekTotals(week: string[]) {
     const daySet = new Set(week);
-    const weekSeanceIds = new Set(
-      seances.filter((s) => s.date_prevue && daySet.has(s.date_prevue)).map((s) => s.id)
-    );
+    const weekSeances = seances.filter((s) => s.date_prevue && daySet.has(s.date_prevue));
+    const weekSeanceIds = new Set(weekSeances.map((s) => s.id));
     const weekBlocs = blocs.filter((b) => weekSeanceIds.has(b.seance_id)).map(toBlocSeanceInput);
-    return computeSeanceVolume(weekBlocs, performances);
+    const volume = computeSeanceVolume(weekBlocs, performances);
+
+    let doneKm = 0;
+    let doneCount = 0;
+    let hasAnyRetour = false;
+    for (const s of weekSeances) {
+      const r = retourBySeanceId.get(s.id);
+      if (!r) continue;
+      hasAnyRetour = true;
+      if (r.statut !== "non_fait") {
+        doneCount += 1;
+        if (r.distance_reelle_metres) doneKm += r.distance_reelle_metres / 1000;
+      }
+    }
+
+    return {
+      volume,
+      seanceCount: weekSeances.length,
+      hasAnyRetour,
+      doneKm: Math.round(doneKm * 10) / 10,
+      doneCount,
+    };
   }
 
-  function navigate(nextView: "mois" | "semaine", nextDate: string) {
-    router.push(`?vue=${nextView}&date=${nextDate}`);
+  function navigate(nextView: "mois" | "semaine", nextDensity: "detaille" | "compact", nextDate: string) {
+    router.push(`?vue=${nextView}&densite=${nextDensity}&date=${nextDate}`);
   }
 
-  function shiftReference(days: number) {
-    const next = new Date(referenceDate);
-    next.setDate(next.getDate() + days);
-    navigate(view, format(next, "yyyy-MM-dd"));
+  function shiftReference(direction: 1 | -1) {
+    const ref = parseISO(referenceDate);
+    const next = view === "mois" ? addMonths(ref, direction) : addWeeks(ref, direction);
+    navigate(view, density, format(next, "yyyy-MM-dd"));
   }
 
   async function handleDrop(seanceId: string, newDate: string) {
     await moveSeanceDate(seanceId, newDate);
   }
 
+  const basePerformance = selectBasePerformance(performances);
+  const threshold = basePerformance ? computeThresholdPaceSecondsPerKm(basePerformance) : null;
+  const paceZones = threshold ? computePaceZones(threshold) : null;
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">
-            Calendrier — {athlete.prenom} {athlete.nom}
-          </h1>
-          <p className="text-muted-foreground text-sm capitalize">
-            {format(parseISO(referenceDate), view === "mois" ? "MMMM yyyy" : "'Semaine du' dd MMMM yyyy", {
-              locale: fr,
-            })}
+    <div className="flex gap-8">
+      <aside className="flex w-52 shrink-0 flex-col gap-1">
+        <p className="mb-1 text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase">
+          Athlètes
+        </p>
+        {allAthletes.map((a) => (
+          <Link
+            key={a.id}
+            href={`/admin/athletes/${a.identifiant}/calendrier`}
+            className={`rounded-[3px] px-2.5 py-2 text-sm ${
+              a.id === athlete.id ? "bg-primary font-semibold text-primary-foreground" : "text-[#3D4B50]"
+            }`}
+          >
+            {a.prenom} {a.nom}
+          </Link>
+        ))}
+
+        <div className="mt-4 flex flex-col gap-1.5 border-t pt-4">
+          <p className="mb-1 text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase">
+            Zones de {athlete.prenom}
           </p>
+          {!paceZones ? (
+            <p className="text-xs text-muted-foreground">Aucune performance de référence.</p>
+          ) : (
+            ZONE_ORDER.map((zone) => {
+              const pace = paceZones[zone];
+              return (
+                <div key={zone} className="flex items-center gap-2">
+                  <span
+                    className="size-3 rounded-[2px]"
+                    style={{ backgroundColor: ZONE_COLORS[zone] }}
+                  />
+                  <span className="font-mono text-[11px] text-[#3D4B50]">
+                    {ZONE_SHORT_LABELS[zone]}{" "}
+                    {pace.minSecondsPerKm === null
+                      ? `< ${formatPaceSecondsPerKm(pace.maxSecondsPerKm)}`
+                      : `${formatPaceSecondsPerKm(pace.minSecondsPerKm)}–${formatPaceSecondsPerKm(pace.maxSecondsPerKm)}`}
+                  </span>
+                </div>
+              );
+            })
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigate(view, today)}>
-            Aujourd&apos;hui
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => shiftReference(view === "mois" ? -30 : -7)}>
-            ← Précédent
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => shiftReference(view === "mois" ? 30 : 7)}>
-            Suivant →
-          </Button>
-          <div className="ml-2 flex rounded-md border">
-            <Button
-              variant={view === "mois" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => navigate("mois", referenceDate)}
-            >
-              Mois
-            </Button>
-            <Button
-              variant={view === "semaine" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => navigate("semaine", referenceDate)}
-            >
-              Semaine
-            </Button>
+      </aside>
+
+      <div className="flex flex-1 flex-col gap-4">
+        <div className="flex items-end justify-between">
+          <div className="flex flex-col gap-1.5">
+            <h1 className="text-2xl font-bold tracking-tight">
+              {athlete.prenom} {athlete.nom}
+            </h1>
+            {nextCompetition && (
+              <p className="font-mono text-xs text-muted-foreground">
+                {nextCompetition.nom} · {format(parseISO(nextCompetition.date), "dd MMMM", { locale: fr })} · J-
+                {differenceInCalendarDays(parseISO(nextCompetition.date), parseISO(today))}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex overflow-hidden rounded-[3px] border">
+              <button
+                type="button"
+                onClick={() => navigate("mois", density, referenceDate)}
+                className={`px-3.5 py-2 text-[13px] font-medium ${view === "mois" ? "bg-foreground text-background" : ""}`}
+              >
+                Mois
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("semaine", density, referenceDate)}
+                className={`px-3.5 py-2 text-[13px] font-medium ${view === "semaine" ? "bg-foreground text-background" : ""}`}
+              >
+                Semaine
+              </button>
+            </div>
+            <div className="flex overflow-hidden rounded-[3px] border">
+              <button
+                type="button"
+                onClick={() => navigate(view, "detaille", referenceDate)}
+                className={`px-3.5 py-2 text-[13px] font-medium ${density === "detaille" ? "bg-foreground text-background" : ""}`}
+              >
+                Détaillé
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate(view, "compact", referenceDate)}
+                className={`px-3.5 py-2 text-[13px] font-medium ${density === "compact" ? "bg-foreground text-background" : ""}`}
+              >
+                Compact
+              </button>
+            </div>
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={() => shiftReference(-1)} aria-label="Précédent">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 5l-7 7 7 7" />
+                </svg>
+              </button>
+              <span className="min-w-[110px] text-center text-[15px] font-semibold capitalize">
+                {format(parseISO(referenceDate), view === "mois" ? "MMMM yyyy" : "'sem.' dd MMM", { locale: fr })}
+              </span>
+              <button type="button" onClick={() => shiftReference(1)} aria-label="Suivant">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+              <Button variant="outline" size="sm" onClick={() => navigate(view, density, today)}>
+                Aujourd&apos;hui
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="flex flex-col gap-2">
-        {weeks.map((week) => {
-          const volume = weekVolume(week);
-          return (
-            <div key={week[0]} className="flex gap-2">
-              <div className="grid flex-1 grid-cols-7 gap-2">
+        <div className="flex flex-col gap-1.5">
+          {weeks.map((week) => {
+            const totals = weekTotals(week);
+            return (
+              <div key={week[0]} className="grid grid-cols-[repeat(7,1fr)_130px] gap-1.5">
                 {week.map((day) => {
-                  const dayLabel = format(parseISO(day), "EEE dd/MM", { locale: fr });
                   const daySeances = seancesByDay.get(day) ?? [];
+                  const competition = competitionByDay.get(day);
                   const isToday = day === today;
                   const inCurrentMonth =
                     view === "semaine" ||
                     format(parseISO(day), "yyyy-MM") === format(parseISO(referenceDate), "yyyy-MM");
+
+                  if (competition) {
+                    return (
+                      <div
+                        key={day}
+                        className="flex flex-col gap-1.5 rounded-[3px] bg-foreground p-2.5 text-background"
+                        style={{ height: density === "compact" ? 44 : 132 }}
+                      >
+                        <span className="font-mono text-[11px] opacity-70">
+                          {format(parseISO(day), "d MMM", { locale: fr })}
+                        </span>
+                        <span className="text-[11px] font-bold tracking-[0.09em] uppercase">
+                          Compétition
+                        </span>
+                        <span className="text-[13px] font-semibold">{competition.nom}</span>
+                        {competition.objectif_temps_secondes && (
+                          <span className="font-mono text-xs opacity-70">
+                            objectif{" "}
+                            {Math.floor(competition.objectif_temps_secondes / 60)}:
+                            {String(competition.objectif_temps_secondes % 60).padStart(2, "0")}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  }
 
                   return (
                     <div
@@ -203,83 +363,129 @@ export function CalendarView({
                         const seanceId = e.dataTransfer.getData("text/plain");
                         if (seanceId) void handleDrop(seanceId, day);
                       }}
-                      className={`flex min-h-28 flex-col gap-1 rounded-md border p-2 ${
-                        isToday ? "border-primary" : ""
+                      className={`relative flex flex-col gap-1 overflow-hidden rounded-[3px] border bg-card p-2 ${
+                        isToday ? "border-foreground" : ""
                       } ${inCurrentMonth ? "" : "opacity-50"}`}
+                      style={{ minHeight: density === "compact" ? 44 : 132 }}
                     >
-                      <p className="text-muted-foreground text-xs capitalize">{dayLabel}</p>
-                      <div className="flex flex-1 flex-col gap-1">
-                        {daySeances.map((s) => {
-                          const seanceBlocs = (blocsBySeanceId.get(s.id) ?? []).map(
-                            toBlocSeanceInput
-                          );
-                          const volumeSeance = computeSeanceVolume(seanceBlocs, performances);
-                          const retour = retourBySeanceId.get(s.id);
-                          const isPastDay = day < today;
-                          return (
-                            <div
-                              key={s.id}
-                              draggable
-                              onDragStart={(e) => e.dataTransfer.setData("text/plain", s.id)}
-                              className="group flex flex-col gap-0.5 rounded border bg-muted/50 px-1.5 py-1 text-xs"
-                            >
-                              <div className="flex items-start justify-between gap-1">
-                                <Link
-                                  href={`/admin/athletes/${athlete.identifiant}/seances/${s.id}`}
-                                  className="font-medium hover:underline"
-                                >
-                                  {s.titre}
-                                </Link>
-                                <button
-                                  type="button"
-                                  onClick={() => void deleteSeance(s.id)}
-                                  className="text-muted-foreground opacity-0 group-hover:opacity-100"
-                                  aria-label="Supprimer"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                              <span className="text-muted-foreground">
-                                {SEANCE_TYPE_LABELS[s.type]} · {volumeSeance.distanceKm} km
-                              </span>
-                              {retour ? (
-                                <div className="flex items-center gap-1">
-                                  <span className="text-muted-foreground">
-                                    {RETOUR_STATUT_LABELS[retour.statut]}
+                      <span className="font-mono text-[11px] text-muted-foreground">
+                        {format(parseISO(day), "d")}
+                      </span>
+
+                      {daySeances.length === 0 ? (
+                        <span className="text-[13px] font-medium text-[#B4C2C2]">Repos</span>
+                      ) : (
+                        <div className="flex flex-1 flex-col gap-1.5">
+                          {daySeances.map((s) => {
+                            const seanceBlocs = (blocsBySeanceId.get(s.id) ?? []).map(toBlocSeanceInput);
+                            const volumeSeance = computeSeanceVolume(seanceBlocs, performances);
+                            const retour = retourBySeanceId.get(s.id);
+
+                            return (
+                              <div
+                                key={s.id}
+                                draggable
+                                onDragStart={(e) => e.dataTransfer.setData("text/plain", s.id)}
+                                className="group relative flex flex-col gap-1 pl-2"
+                              >
+                                <span
+                                  className="absolute top-0 bottom-0 left-0 w-[3px] rounded-full"
+                                  style={{
+                                    background: !retour
+                                      ? "transparent"
+                                      : retour.statut === "fait"
+                                        ? "var(--foreground)"
+                                        : retour.statut === "partiel"
+                                          ? "repeating-linear-gradient(180deg, var(--foreground) 0 4px, transparent 4px 8px)"
+                                          : "var(--border)",
+                                  }}
+                                />
+                                {retour?.rpe && (
+                                  <span className="absolute top-0 right-0 flex size-[22px] items-center justify-center rounded-full border bg-card text-[11px] font-bold">
+                                    {retour.rpe}
                                   </span>
-                                  <RpeBadge rpe={retour.rpe} />
+                                )}
+                                {density === "detaille" && (
+                                  <span
+                                    className="h-1 rounded-full"
+                                    style={{ backgroundColor: seanceTypeColor(s.type) }}
+                                  />
+                                )}
+                                <div className="flex items-start justify-between gap-1 pr-6">
+                                  <Link
+                                    href={`/admin/athletes/${athlete.identifiant}/seances/${s.id}`}
+                                    className="text-[13px] leading-tight font-semibold hover:underline"
+                                  >
+                                    {s.titre}
+                                  </Link>
+                                  <button
+                                    type="button"
+                                    onClick={() => void deleteSeance(s.id)}
+                                    className="text-muted-foreground opacity-0 group-hover:opacity-100"
+                                    aria-label="Supprimer"
+                                  >
+                                    ×
+                                  </button>
                                 </div>
-                              ) : (
-                                isPastDay && (
-                                  <span className="text-muted-foreground italic">Pas de retour</span>
-                                )
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setAddDialogDate(day)}
-                        className="text-muted-foreground text-left text-xs hover:underline"
-                      >
-                        + Ajouter
-                      </button>
+                                {density === "detaille" && (
+                                  <span className="font-mono text-xs text-muted-foreground">
+                                    {retour?.statut === "non_fait"
+                                      ? "non fait"
+                                      : retour?.distance_reelle_metres
+                                        ? `${(retour.distance_reelle_metres / 1000).toFixed(1)} / ${volumeSeance.distanceKm} km`
+                                        : `${volumeSeance.distanceKm} km`}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {density === "detaille" && (
+                        <button
+                          type="button"
+                          onClick={() => setAddDialogDate(day)}
+                          className="mt-auto text-left text-[11px] text-muted-foreground hover:underline"
+                        >
+                          + Ajouter
+                        </button>
+                      )}
                     </div>
                   );
                 })}
+
+                <div className="flex flex-col justify-center gap-1 border-l pl-4">
+                  <span className="font-mono text-[19px] font-semibold tracking-tight">
+                    {totals.hasAnyRetour ? (
+                      <>
+                        {totals.doneKm}{" "}
+                        <span className="text-[13px] font-normal text-muted-foreground">
+                          / {totals.volume.distanceKm} km
+                        </span>
+                      </>
+                    ) : (
+                      `${totals.volume.distanceKm} km`
+                    )}
+                  </span>
+                  <span className="font-mono text-[11px] text-muted-foreground">
+                    {totals.doneCount}/{totals.seanceCount} séances
+                  </span>
+                  <span className="font-mono text-[11px] text-muted-foreground">
+                    {formatDurationHM(totals.volume.dureeMinutes)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setDuplicateAnchor(week[0])}
+                    className="mt-1 text-left text-[11px] text-muted-foreground hover:underline"
+                  >
+                    Dupliquer →
+                  </button>
+                </div>
               </div>
-              <div className="flex w-32 flex-col items-end justify-center gap-1 text-sm">
-                <span className="font-medium">
-                  {volume.distanceKm} km · {volume.dureeMinutes} min
-                </span>
-                <Button variant="ghost" size="sm" onClick={() => setDuplicateAnchor(week[0])}>
-                  Dupliquer →
-                </Button>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       <AddSeanceDialog

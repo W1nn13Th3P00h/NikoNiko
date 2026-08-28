@@ -105,7 +105,7 @@ Import Strava/Garmin, notifications, export FIT effectif, multi-coach, graphique
 - [x] Étape 2 — Logique métier (`lib/paces.ts`, `lib/volume.ts`, 18 tests Vitest)
 - [x] Étape 3 — Authentification (magic link via `token_hash`/`verifyOtp`, protection des routes dans `proxy.ts`, SMTP Resend configuré côté Supabase) — vérifié de bout en bout : connexion coach → `/admin`
 - [x] Étape 4 — Admin : athlètes (liste `/admin` avec création "+ Nouvel athlète", fiche `/admin/athletes/[identifiant]` avec zones calculées en clair et notes coach éditables)
-- [x] Étape 5 — Admin : calendrier (`/admin/athletes/[identifiant]/calendrier`, vues mois/semaine, drag and drop, ajout bibliothèque/custom, duplication de semaine)
+- [x] Étape 5 — Admin : calendrier (`/admin/athletes/[identifiant]/calendrier`, vues mois/semaine × détaillé/compact, drag and drop, ajout bibliothèque/custom, duplication de semaine). Redessiné selon la maquette : sidebar switcher d'athlète + zones de référence toujours visibles, barre colorée par type de séance, barre de statut retour (plein/rayé/gris), volume réel/prévu en case, compétitions intégrées à la grille
 - [x] Étape 6 — Éditeur de séance (`/admin/athletes/[identifiant]/seances/[seanceId]`), Bibliothèque (`/admin/bibliotheque`, filtre type + recherche titre — pas de filtre "tag" : ce champ n'existe pas dans le modèle de données malgré la mention dans le prompt initial), Retours (`/admin/retours`, chronologique, 100 derniers)
 - [x] Étape 7 — Athlète (`/mon-plan`)
 - [ ] Étape 8 — QA responsive + finalisation

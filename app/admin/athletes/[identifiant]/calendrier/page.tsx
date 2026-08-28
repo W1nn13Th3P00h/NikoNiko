@@ -11,13 +11,15 @@ export default async function AthleteCalendarPage({
   searchParams,
 }: {
   params: Promise<{ identifiant: string }>;
-  searchParams: Promise<{ vue?: string; date?: string }>;
+  searchParams: Promise<{ vue?: string; densite?: string; date?: string }>;
 }) {
   const { identifiant } = await params;
-  const { vue, date } = await searchParams;
+  const { vue, densite, date } = await searchParams;
 
   const view = vue === "semaine" ? "semaine" : "mois";
+  const density = densite === "compact" ? "compact" : "detaille";
   const referenceDate = date ? new Date(date) : nowInParis();
+  const today = format(nowInParis(), "yyyy-MM-dd");
 
   const weeks = view === "mois" ? getMonthGridWeeks(referenceDate) : [getWeekGridDays(referenceDate)];
   const gridStart = weeks[0][0];
@@ -35,23 +37,43 @@ export default async function AthleteCalendarPage({
 
   if (!athlete) notFound();
 
-  const [{ data: allAthletes }, { data: librarySeances }, { data: gridSeances }, { data: performanceRows }] =
-    await Promise.all([
-      supabase.from("athlete").select("id, prenom, nom").eq("actif", true).order("nom"),
-      supabase.from("seance").select("id, titre, type").eq("est_modele", true).order("titre"),
-      supabase
-        .from("seance")
-        .select("id, titre, type, date_prevue, ordre_dans_journee")
-        .eq("athlete_id", athlete.id)
-        .eq("est_modele", false)
-        .gte("date_prevue", gridStartStr)
-        .lte("date_prevue", gridEndStr)
-        .order("ordre_dans_journee"),
-      supabase
-        .from("performance_reference")
-        .select("distance, temps_secondes, date_perf, type")
-        .eq("athlete_id", athlete.id),
-    ]);
+  const [
+    { data: allAthletes },
+    { data: librarySeances },
+    { data: gridSeances },
+    { data: performanceRows },
+    { data: gridCompetitions },
+    { data: nextCompetition },
+  ] = await Promise.all([
+    supabase.from("athlete").select("id, prenom, nom, identifiant").eq("actif", true).order("nom"),
+    supabase.from("seance").select("id, titre, type").eq("est_modele", true).order("titre"),
+    supabase
+      .from("seance")
+      .select("id, titre, type, date_prevue, ordre_dans_journee")
+      .eq("athlete_id", athlete.id)
+      .eq("est_modele", false)
+      .gte("date_prevue", gridStartStr)
+      .lte("date_prevue", gridEndStr)
+      .order("ordre_dans_journee"),
+    supabase
+      .from("performance_reference")
+      .select("distance, temps_secondes, date_perf, type")
+      .eq("athlete_id", athlete.id),
+    supabase
+      .from("competition")
+      .select("id, nom, date, objectif_temps_secondes, priorite")
+      .eq("athlete_id", athlete.id)
+      .gte("date", gridStartStr)
+      .lte("date", gridEndStr),
+    supabase
+      .from("competition")
+      .select("nom, date, priorite")
+      .eq("athlete_id", athlete.id)
+      .gte("date", today)
+      .order("date")
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
   const seanceIds = (gridSeances ?? []).map((s) => s.id);
   const [{ data: blocs }, { data: retours }] = await Promise.all([
@@ -59,7 +81,10 @@ export default async function AthleteCalendarPage({
       ? supabase.from("bloc_seance").select("*").in("seance_id", seanceIds)
       : Promise.resolve({ data: [] }),
     seanceIds.length > 0
-      ? supabase.from("retour_seance").select("seance_id, rpe, statut").in("seance_id", seanceIds)
+      ? supabase
+          .from("retour_seance")
+          .select("seance_id, rpe, statut, distance_reelle_metres, duree_reelle_secondes")
+          .in("seance_id", seanceIds)
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -72,10 +97,13 @@ export default async function AthleteCalendarPage({
       seances={gridSeances ?? []}
       blocs={blocs ?? []}
       retours={retours ?? []}
+      competitions={gridCompetitions ?? []}
+      nextCompetition={nextCompetition ?? null}
       performances={(performanceRows ?? []).map(toPerformanceReference)}
       view={view}
+      density={density}
       referenceDate={format(referenceDate, "yyyy-MM-dd")}
-      today={format(nowInParis(), "yyyy-MM-dd")}
+      today={today}
     />
   );
 }
