@@ -165,11 +165,9 @@ export function CalendarView({
 
     let doneKm = 0;
     let doneCount = 0;
-    let hasAnyRetour = false;
     for (const s of weekSeances) {
       const r = retourBySeanceId.get(s.id);
       if (!r) continue;
-      hasAnyRetour = true;
       if (r.statut !== "non_fait") {
         doneCount += 1;
         if (r.distance_reelle_metres) doneKm += r.distance_reelle_metres / 1000;
@@ -179,7 +177,6 @@ export function CalendarView({
     return {
       volume,
       seanceCount: weekSeances.length,
-      hasAnyRetour,
       doneKm: Math.round(doneKm * 10) / 10,
       doneCount,
     };
@@ -457,16 +454,10 @@ export function CalendarView({
 
                 <div className="flex flex-col justify-center gap-1 border-l pl-4">
                   <span className="font-mono text-[19px] font-semibold tracking-tight">
-                    {totals.hasAnyRetour ? (
-                      <>
-                        {totals.doneKm}{" "}
-                        <span className="text-[13px] font-normal text-muted-foreground">
-                          / {totals.volume.distanceKm} km
-                        </span>
-                      </>
-                    ) : (
-                      `${totals.volume.distanceKm} km`
-                    )}
+                    {totals.doneKm}{" "}
+                    <span className="text-[13px] font-normal text-muted-foreground">
+                      / {totals.volume.distanceKm} km
+                    </span>
                   </span>
                   <span className="font-mono text-[11px] text-muted-foreground">
                     {totals.doneCount}/{totals.seanceCount} séances
