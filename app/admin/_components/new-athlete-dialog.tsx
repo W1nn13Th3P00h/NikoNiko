@@ -60,8 +60,8 @@ export function NewAthleteDialog() {
             </div>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" required />
+            <Label htmlFor="email">Email (optionnel)</Label>
+            <Input id="email" name="email" type="email" />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="identifiant">Identifiant (slug d&apos;URL, connexion par code)</Label>

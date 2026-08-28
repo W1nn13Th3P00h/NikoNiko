@@ -16,7 +16,6 @@ export async function createAthlete(formData: FormData): Promise<{ error?: strin
 
   if (typeof prenom !== "string" || !prenom.trim()) return { error: "Prénom requis." };
   if (typeof nom !== "string" || !nom.trim()) return { error: "Nom requis." };
-  if (typeof email !== "string" || !email.trim()) return { error: "Email requis." };
 
   const normalizedIdentifiant = typeof identifiant === "string" ? identifiant.trim().toLowerCase() : "";
   if (!isValidIdentifiant(normalizedIdentifiant)) {
@@ -29,7 +28,7 @@ export async function createAthlete(formData: FormData): Promise<{ error?: strin
     .insert({
       prenom: prenom.trim(),
       nom: nom.trim(),
-      email: email.trim(),
+      email: typeof email === "string" && email.trim() ? email.trim() : null,
       identifiant: normalizedIdentifiant,
       date_naissance: typeof dateNaissance === "string" && dateNaissance ? dateNaissance : null,
       fc_max: typeof fcMax === "string" && fcMax ? Number(fcMax) : null,
