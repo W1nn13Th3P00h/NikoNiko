@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { RpeBadge } from "./_components/rpe-badge";
+import { NewAthleteDialog } from "./_components/new-athlete-dialog";
 
 export default async function AdminAthleteListPage() {
   const supabase = await createClient();
@@ -101,7 +102,10 @@ export default async function AdminAthleteListPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Athlètes</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Athlètes</h1>
+        <NewAthleteDialog />
+      </div>
 
       <Table>
         <TableHeader>
