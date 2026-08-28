@@ -5,44 +5,29 @@ import { createClient } from "@/utils/supabase/server";
 import { identifiantToInternalEmail } from "@/lib/athlete-login";
 import { resolvePostLoginPath } from "@/lib/auth-destination";
 
-export async function signInWithMagicLink(formData: FormData) {
-  const email = formData.get("email");
-
-  if (typeof email !== "string" || email.trim().length === 0) {
-    redirect("/login?error=Adresse+email+requise");
-  }
-
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithOtp({
-    email: email.trim(),
-    options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/confirm`,
-    },
-  });
-
-  if (error) {
-    redirect(`/login?error=${encodeURIComponent(error.message)}`);
-  }
-
-  redirect("/login?sent=1");
-}
-
-export async function signInWithIdentifiant(formData: FormData) {
+// One form, one mechanism for everyone (coach included): every identifiant
+// maps to the same synthetic internal email scheme, so this never needs to
+// know or care who it's signing in.
+export async function signIn(formData: FormData) {
   const identifiant = formData.get("identifiant");
-  const code = formData.get("code");
+  const password = formData.get("password");
 
-  if (typeof identifiant !== "string" || typeof code !== "string" || !identifiant || !code) {
-    redirect("/login?error=Identifiant+et+code+requis");
+  if (
+    typeof identifiant !== "string" ||
+    typeof password !== "string" ||
+    !identifiant.trim() ||
+    !password
+  ) {
+    redirect("/login?error=Identifiant+et+mot+de+passe+requis");
   }
 
+  const email = identifiantToInternalEmail(identifiant.trim().toLowerCase());
+
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: identifiantToInternalEmail(identifiant.trim().toLowerCase()),
-    password: code,
-  });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error || !data.user) {
-    redirect("/login?error=Identifiant+ou+code+incorrect");
+    redirect("/login?error=Identifiant+ou+mot+de+passe+incorrect");
   }
 
   redirect(await resolvePostLoginPath(data.user.id));

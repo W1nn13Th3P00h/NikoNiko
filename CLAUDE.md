@@ -12,7 +12,7 @@ Application privée de suivi de plans d'entraînement en course à pied. Un coac
 ## Stack
 
 - Next.js (App Router, TypeScript strict, React Server Components par défaut, Server Actions pour les mutations)
-- Supabase : Postgres + Auth (magic link) + Row Level Security
+- Supabase : Postgres + Auth (identifiant + mot de passe) + Row Level Security
 - Tailwind CSS + shadcn/ui
 - date-fns, timezone Europe/Paris, semaines commençant le lundi
 - Vitest pour les tests unitaires
@@ -31,9 +31,8 @@ Pas de state manager global tant que le besoin n'est pas prouvé.
 
 ```
 app/                    routes (App Router)
-  login/                page + Server Action d'envoi du magic link
-  auth/confirm/         Route Handler qui échange token_hash contre une session
-  apres-connexion/      aiguille vers /admin ou /mon-plan selon profile.is_admin
+  login/                page + Server Action de connexion (identifiant + mot de passe, coach compris)
+  apres-connexion/      filet de sécurité seulement (voir lib/auth-destination.ts) : aiguille vers /admin ou /mon-plan selon profile.is_admin
   actions/auth.ts        Server Action de déconnexion
   admin/                parcours coach, protégé
     page.tsx             liste des athlètes (volume semaine, dernier RPE, prochaine compét)
@@ -59,7 +58,8 @@ lib/
   mappers.ts             conversion lignes Supabase (snake_case) -> types lib/paces, lib/volume
   date.ts                nowInParis() : "aujourd'hui" ancré Europe/Paris, jamais new Date() nu
   labels.ts               labels français pour les enums bruts sans lib dédiée (ex: seance_type)
-  athlete-login.ts         mapping identifiant <-> email interne synthétique pour la connexion par code
+  athlete-login.ts         mapping identifiant <-> email interne synthétique pour la connexion par mot de passe
+  auth-destination.ts      résout où rediriger après connexion (/admin ou /mon-plan) selon profile.is_admin
   paces.test.ts
   volume.test.ts
 utils/supabase/
@@ -84,11 +84,12 @@ supabase/migrations/     migrations SQL (schéma + RLS + seed)
 
 ## Sécurité
 
-- Deux méthodes de connexion, au choix par athlète : magic link (email réel), ou identifiant + code défini par le coach. La seconde existe pour deux raisons : certains athlètes préfèrent ne pas gérer d'email pour ça, et elle contourne la limite Resend en mode test (voir README.md) tant qu'aucun domaine n'est vérifié.
-  - L'identifiant + code s'appuie sur un compte Supabase Auth classique avec un email interne synthétique (`identifiant@athlete.appcoaching.internal`, jamais résolu ni envoyé) et un mot de passe = le code — pas un système d'auth parallèle.
-  - `athlete.identifiant` sert aussi de slug d'URL admin (`/admin/athletes/[identifiant]`, au lieu de l'UUID) — obligatoire et unique pour tout athlète, que le coach configure ou non un code de connexion dessus.
-  - Créé/modifié via `auth.admin.createUser`/`updateUserById` (`utils/supabase/admin.ts`, clé service_role, jamais exposée au client, jamais importée hors des Server Actions qui en ont besoin).
-  - Un athlete_id ne pointe que vers UN auth_user_id : configurer l'identifiant sur un athlète déjà lié à un email réel crée un nouveau compte et re-pointe le lien plutôt que d'écraser l'email réel en place (`setAthleteCredentials` vérifie si le compte lié est déjà un compte "interne" avant de décider update vs create).
+- **Une seule méthode de connexion pour tout le monde, identifiant + mot de passe** (`app/login/actions.ts`) — pas de magic link, pas d'email envoyé par l'app. Simplifie le déploiement (aucun SMTP/domaine à configurer côté Supabase) et évite qu'un athlète ait à gérer un email pour ça.
+  - Tout identifiant (coach compris) s'appuie sur un compte Supabase Auth classique avec un email interne synthétique (`identifiant@appcoaching.internal`, jamais résolu ni envoyé) et un mot de passe — pas un système d'auth parallèle, pas de distinction de cas dans `signIn` (app/login/actions.ts) : un identifiant, un email synthétique, un `signInWithPassword`, quel que soit qui se connecte.
+  - `athlete.identifiant` sert aussi de slug d'URL admin (`/admin/athletes/[identifiant]`, au lieu de l'UUID) — obligatoire et unique pour tout athlète, que le coach configure ou non des identifiants de connexion dessus. Le coach n'a pas de ligne `athlete` ni de table dédiée pour son propre identifiant (`jeremie`) — un seul coach, pas besoin d'une abstraction pour un cas qui ne peut pas encore arriver ; son compte Auth existant a simplement été repointé sur l'email synthétique correspondant.
+  - Comptes créés/modifiés via `auth.admin.createUser`/`updateUserById` (`utils/supabase/admin.ts`, clé service_role, jamais exposée au client, jamais importée hors des Server Actions qui en ont besoin).
+  - Un athlete_id ne pointe que vers UN auth_user_id : configurer l'identifiant sur un athlète déjà lié à un compte crée un nouveau compte et re-pointe le lien plutôt que d'écraser l'ancien en place (`setAthleteCredentials` vérifie si le compte lié est déjà un compte "interne" avant de décider update vs create).
+  - Pas de réinitialisation de mot de passe en self-service (aucun email envoyé) : le coach réinitialise le code d'un athlète depuis sa fiche ; pour son propre compte, il faut passer par le dashboard Supabase (Authentication → Users) ou une intervention manuelle côté service_role.
 - RLS Postgres : un athlète ne voit que ses propres données, et ne peut écrire que dans `retour_seance` sur ses propres séances (occurrences, pas modèles).
 - Rôle admin porté par un champ sur le profil, pas par une liste d'emails en dur.
 - Policies RLS écrites explicitement et commentées dans les migrations.
@@ -103,7 +104,7 @@ Import Strava/Garmin, notifications, export FIT effectif, multi-coach, graphique
 - [x] Étape 0 — Socle du projet (scaffold Next.js, Tailwind, shadcn/ui, Supabase env/client/middleware, git init)
 - [x] Étape 1 — Modèle de données (migration SQL, RLS, seed appliqués au projet distant, types TS générés dans `lib/database.types.ts`)
 - [x] Étape 2 — Logique métier (`lib/paces.ts`, `lib/volume.ts`, 18 tests Vitest)
-- [x] Étape 3 — Authentification (magic link via `token_hash`/`verifyOtp`, protection des routes dans `proxy.ts`, SMTP Resend configuré côté Supabase) — vérifié de bout en bout : connexion coach → `/admin`
+- [x] Étape 3 — Authentification (identifiant + mot de passe pour tout le monde, protection des routes dans `proxy.ts`) — magic link retiré au profit d'une connexion unique, plus simple, sans email
 - [x] Étape 4 — Admin : athlètes (liste `/admin` avec création "+ Nouvel athlète", fiche `/admin/athletes/[identifiant]` avec zones calculées en clair et notes coach éditables)
 - [x] Étape 5 — Admin : calendrier (`/admin/athletes/[identifiant]/calendrier`, vues mois/semaine × détaillé/compact, drag and drop, ajout bibliothèque/custom, duplication de semaine). Redessiné selon la maquette : sidebar switcher d'athlète + zones de référence toujours visibles, barre colorée par type de séance, barre de statut retour (plein/rayé/gris), volume réel/prévu en case, compétitions intégrées à la grille
 - [x] Étape 6 — Éditeur de séance (`/admin/athletes/[identifiant]/seances/[seanceId]`), Bibliothèque (`/admin/bibliotheque`, filtre type + recherche titre — pas de filtre "tag" : ce champ n'existe pas dans le modèle de données malgré la mention dans le prompt initial), Retours (`/admin/retours`, chronologique, 100 derniers)
