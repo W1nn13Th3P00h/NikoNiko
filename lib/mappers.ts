@@ -11,6 +11,26 @@ type PerformanceRow = Pick<
   "distance" | "temps_secondes" | "date_perf" | "type"
 >;
 type BlocRow = Database["public"]["Tables"]["bloc_seance"]["Row"];
+type BlocRole = Database["public"]["Enums"]["bloc_role"];
+
+// BlocSeanceInput plus the fields BlocList needs to render a bloc but that
+// don't affect volume/pace math (role, commentaire, cible_rpe) — lets
+// BlocList render both real DB rows (mon-plan) and unsaved editor drafts
+// (admin) through the same shape.
+export interface BlocDisplayItem extends BlocSeanceInput {
+  role: BlocRole;
+  cibleRpe: number | null;
+  commentaire: string | null;
+}
+
+export function toBlocDisplayItem(row: BlocRow): BlocDisplayItem {
+  return {
+    ...toBlocSeanceInput(row),
+    role: row.role,
+    cibleRpe: row.cible_rpe,
+    commentaire: row.commentaire,
+  };
+}
 
 export function toPerformanceReference(row: PerformanceRow): PerformanceReference {
   return {

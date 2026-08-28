@@ -18,6 +18,9 @@ import {
   SEANCE_TYPE_LABELS,
 } from "@/lib/labels";
 import type { Database } from "@/lib/database.types";
+import { computeProfileSegments } from "@/lib/profile-bar";
+import { ProfileBar } from "@/components/profile-bar";
+import { BlocList } from "@/app/mon-plan/_components/bloc-list";
 import {
   type DraftBloc,
   type BlocRole,
@@ -26,6 +29,7 @@ import {
   applyCibleTypeDefaults,
   applyModeDureeDefaults,
   blankBloc,
+  draftToBlocDisplayItem,
   draftToBlocSeanceInput,
 } from "../_lib/draft";
 import { saveSeance } from "../_lib/seance-actions";
@@ -109,6 +113,7 @@ export function SeanceEditor({
     blocs.filter((b) => b.parentClientId === parentClientId);
 
   const volume = computeSeanceVolume(blocs.map(draftToBlocSeanceInput), performances);
+  const segments = computeProfileSegments(blocs.map(draftToBlocSeanceInput), performances);
 
   function updateBloc(clientId: string, patch: Partial<DraftBloc>) {
     setBlocs((prev) => prev.map((b) => (b.clientId === clientId ? { ...b, ...patch } : b)));
@@ -191,131 +196,161 @@ export function SeanceEditor({
         </p>
       </div>
 
-      {athlete && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Retour de l&apos;athlète</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {retour ? (
-              <div className="flex flex-col gap-1">
-                <p className="font-medium">
-                  {RETOUR_STATUT_LABELS[retour.statut]}
-                  {retour.rpe !== null ? ` · RPE ${retour.rpe}` : ""}
-                </p>
-                {(retour.duree_reelle_secondes || retour.distance_reelle_metres) && (
+      <div className="flex items-start gap-8">
+        <div className="flex flex-1 flex-col gap-6">
+          {athlete && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Retour de l&apos;athlète</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {retour ? (
+                  <div className="flex flex-col gap-1">
+                    <p className="font-medium">
+                      {RETOUR_STATUT_LABELS[retour.statut]}
+                      {retour.rpe !== null ? ` · RPE ${retour.rpe}` : ""}
+                    </p>
+                    {(retour.duree_reelle_secondes || retour.distance_reelle_metres) && (
+                      <p className="text-muted-foreground text-sm">
+                        {retour.duree_reelle_secondes ? `${Math.round(retour.duree_reelle_secondes / 60)} min` : ""}
+                        {retour.duree_reelle_secondes && retour.distance_reelle_metres ? " · " : ""}
+                        {retour.distance_reelle_metres
+                          ? `${(retour.distance_reelle_metres / 1000).toFixed(1)} km`
+                          : ""}
+                      </p>
+                    )}
+                    {retour.commentaire && <p className="text-sm">{retour.commentaire}</p>}
+                  </div>
+                ) : (
                   <p className="text-muted-foreground text-sm">
-                    {retour.duree_reelle_secondes ? `${Math.round(retour.duree_reelle_secondes / 60)} min` : ""}
-                    {retour.duree_reelle_secondes && retour.distance_reelle_metres ? " · " : ""}
-                    {retour.distance_reelle_metres
-                      ? `${(retour.distance_reelle_metres / 1000).toFixed(1)} km`
-                      : ""}
+                    Pas encore de retour de l&apos;athlète sur cette séance.
                   </p>
                 )}
-                {retour.commentaire && <p className="text-sm">{retour.commentaire}</p>}
+              </CardContent>
+            </Card>
+          )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Séance</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="titre">Titre</Label>
+                <Input id="titre" value={titre} onChange={(e) => setTitre(e.target.value)} />
               </div>
-            ) : (
-              <p className="text-muted-foreground text-sm">
-                Pas encore de retour de l&apos;athlète sur cette séance.
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="type">Type</Label>
+                <Select value={type} onValueChange={(v) => v && setType(v as SeanceType)} items={SEANCE_TYPE_LABELS}>
+                  <SelectTrigger id="type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(SEANCE_TYPE_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="objectif">Objectif (une phrase, affichée à l&apos;athlète)</Label>
+                <Textarea id="objectif" rows={2} value={objectif} onChange={(e) => setObjectif(e.target.value)} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="consignes">Consignes (optionnel)</Label>
+                <Textarea id="consignes" rows={3} value={consignes} onChange={(e) => setConsignes(e.target.value)} />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Blocs</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              {topLevelBlocs.map((bloc, index) => (
+                <div key={bloc.clientId} className="flex flex-col gap-2 rounded-md border p-3">
+                  <BlocRowEditor
+                    bloc={bloc}
+                    performances={performances}
+                    onChange={(patch) => updateBloc(bloc.clientId, patch)}
+                    onRemove={() => removeBloc(bloc.clientId)}
+                    onDuplicate={() => duplicateBloc(bloc.clientId)}
+                    onMoveUp={index > 0 ? () => moveBloc(bloc.clientId, -1) : undefined}
+                    onMoveDown={index < topLevelBlocs.length - 1 ? () => moveBloc(bloc.clientId, 1) : undefined}
+                  />
+
+                  <div className="ml-6 flex flex-col gap-2 border-l pl-3">
+                    {childrenOf(bloc.clientId).map((child, childIndex, arr) => (
+                      <BlocRowEditor
+                        key={child.clientId}
+                        bloc={child}
+                        performances={performances}
+                        onChange={(patch) => updateBloc(child.clientId, patch)}
+                        onRemove={() => removeBloc(child.clientId)}
+                        onDuplicate={() => duplicateBloc(child.clientId)}
+                        onMoveUp={childIndex > 0 ? () => moveBloc(child.clientId, -1) : undefined}
+                        onMoveDown={childIndex < arr.length - 1 ? () => moveBloc(child.clientId, 1) : undefined}
+                      />
+                    ))}
+                    <Button variant="ghost" size="sm" onClick={() => addChildBloc(bloc.clientId)} className="self-start">
+                      + Sous-bloc
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <Button variant="outline" onClick={addTopLevelBloc} className="self-start">
+                + Ajouter un bloc
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <aside className="sticky top-6 flex w-[380px] shrink-0 flex-col gap-3 self-start">
+          <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
+            Aperçu — vue athlète
+          </p>
+          <div className="flex flex-col gap-4 rounded-lg border bg-card p-4">
+            <div className="flex flex-col gap-1">
+              <h2 className="text-xl font-bold tracking-tight">{titre || "Sans titre"}</h2>
+              <p className="font-mono text-sm font-medium text-[#3D4B50]">
+                {volume.distanceKm} km · {volume.dureeMinutes} min
+              </p>
+            </div>
+
+            <ProfileBar segments={segments} />
+
+            <BlocList blocs={blocs.map(draftToBlocDisplayItem)} performances={performances} />
+
+            {!volume.estimationComplete && (
+              <p className="text-muted-foreground text-xs">
+                Estimation partielle : l&apos;athlète n&apos;a pas de performance de référence pour
+                convertir certaines zones en distance.
               </p>
             )}
-          </CardContent>
-        </Card>
-      )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Séance</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="titre">Titre</Label>
-            <Input id="titre" value={titre} onChange={(e) => setTitre(e.target.value)} />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="type">Type</Label>
-            <Select value={type} onValueChange={(v) => v && setType(v as SeanceType)} items={SEANCE_TYPE_LABELS}>
-              <SelectTrigger id="type">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(SEANCE_TYPE_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="objectif">Objectif (une phrase, affichée à l&apos;athlète)</Label>
-            <Textarea id="objectif" rows={2} value={objectif} onChange={(e) => setObjectif(e.target.value)} />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="consignes">Consignes (optionnel)</Label>
-            <Textarea id="consignes" rows={3} value={consignes} onChange={(e) => setConsignes(e.target.value)} />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Aperçu — volume total</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-lg font-medium">
-            {volume.distanceKm} km · {volume.dureeMinutes} min
-          </p>
-          {!volume.estimationComplete && (
-            <p className="text-muted-foreground text-sm">
-              Estimation partielle : l&apos;athlète n&apos;a pas de performance de référence pour
-              convertir certaines zones en distance.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Blocs</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          {topLevelBlocs.map((bloc, index) => (
-            <div key={bloc.clientId} className="flex flex-col gap-2 rounded-md border p-3">
-              <BlocRowEditor
-                bloc={bloc}
-                performances={performances}
-                onChange={(patch) => updateBloc(bloc.clientId, patch)}
-                onRemove={() => removeBloc(bloc.clientId)}
-                onDuplicate={() => duplicateBloc(bloc.clientId)}
-                onMoveUp={index > 0 ? () => moveBloc(bloc.clientId, -1) : undefined}
-                onMoveDown={index < topLevelBlocs.length - 1 ? () => moveBloc(bloc.clientId, 1) : undefined}
-              />
-
-              <div className="ml-6 flex flex-col gap-2 border-l pl-3">
-                {childrenOf(bloc.clientId).map((child, childIndex, arr) => (
-                  <BlocRowEditor
-                    key={child.clientId}
-                    bloc={child}
-                    performances={performances}
-                    onChange={(patch) => updateBloc(child.clientId, patch)}
-                    onRemove={() => removeBloc(child.clientId)}
-                    onDuplicate={() => duplicateBloc(child.clientId)}
-                    onMoveUp={childIndex > 0 ? () => moveBloc(child.clientId, -1) : undefined}
-                    onMoveDown={childIndex < arr.length - 1 ? () => moveBloc(child.clientId, 1) : undefined}
-                  />
-                ))}
-                <Button variant="ghost" size="sm" onClick={() => addChildBloc(bloc.clientId)} className="self-start">
-                  + Sous-bloc
-                </Button>
+            {objectif && (
+              <div className="rounded-lg border bg-card p-3">
+                <h3 className="mb-1 text-xs font-bold tracking-[0.09em] text-muted-foreground uppercase">
+                  Objectif
+                </h3>
+                <p className="font-serif text-sm text-[#3D4B50]">{objectif}</p>
               </div>
-            </div>
-          ))}
-          <Button variant="outline" onClick={addTopLevelBloc} className="self-start">
-            + Ajouter un bloc
-          </Button>
-        </CardContent>
-      </Card>
+            )}
+
+            {consignes && (
+              <div className="rounded-lg border bg-card p-3">
+                <h3 className="mb-1 text-xs font-bold tracking-[0.09em] text-muted-foreground uppercase">
+                  Consignes du coach
+                </h3>
+                <p className="font-serif text-sm text-[#3D4B50]">{consignes}</p>
+              </div>
+            )}
+          </div>
+        </aside>
+      </div>
 
       <div className="fixed inset-x-0 bottom-0 flex items-center justify-between border-t bg-background px-6 py-3">
         <div className="flex items-center gap-2">

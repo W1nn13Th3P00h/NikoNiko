@@ -1,4 +1,4 @@
-import type { Database } from "@/lib/database.types";
+import type { BlocDisplayItem } from "@/lib/mappers";
 import { BLOC_ROLE_LABELS } from "@/lib/labels";
 import {
   ZONE_SHORT_LABELS,
@@ -9,30 +9,28 @@ import {
 } from "@/lib/paces";
 import { ZONE_COLORS } from "@/lib/zone-colors";
 
-type BlocRow = Database["public"]["Tables"]["bloc_seance"]["Row"];
-
-function formatEffort(bloc: BlocRow): string {
-  if (bloc.mode_duree === "distance" && bloc.distance_metres) {
-    return bloc.distance_metres >= 1000 && bloc.distance_metres % 1000 === 0
-      ? `${bloc.distance_metres / 1000} km`
-      : `${bloc.distance_metres} m`;
+function formatEffort(bloc: BlocDisplayItem): string {
+  if (bloc.modeDuree === "distance" && bloc.distanceMetres) {
+    return bloc.distanceMetres >= 1000 && bloc.distanceMetres % 1000 === 0
+      ? `${bloc.distanceMetres / 1000} km`
+      : `${bloc.distanceMetres} m`;
   }
-  if ((bloc.mode_duree === "temps" || bloc.mode_duree === "libre") && bloc.duree_secondes) {
-    return formatDurationHMS(bloc.duree_secondes);
+  if ((bloc.modeDuree === "temps" || bloc.modeDuree === "libre") && bloc.dureeSecondes) {
+    return formatDurationHMS(bloc.dureeSecondes);
   }
   return "Libre";
 }
 
-function formatCible(bloc: BlocRow, performances: PerformanceReference[]): string {
-  if (bloc.cible_type === "libre") return "";
-  if (bloc.cible_type === "rpe") return bloc.cible_rpe ? `RPE ${bloc.cible_rpe}` : "";
-  if (bloc.cible_type === "allure_absolue") {
-    return bloc.cible_allure_secondes_par_km
-      ? formatPaceSecondsPerKm(bloc.cible_allure_secondes_par_km)
+function formatCible(bloc: BlocDisplayItem, performances: PerformanceReference[]): string {
+  if (bloc.cibleType === "libre") return "";
+  if (bloc.cibleType === "rpe") return bloc.cibleRpe ? `RPE ${bloc.cibleRpe}` : "";
+  if (bloc.cibleType === "allure_absolue") {
+    return bloc.cibleAllureSecondesParKm
+      ? formatPaceSecondsPerKm(bloc.cibleAllureSecondesParKm)
       : "";
   }
-  if (!bloc.cible_zone) return "";
-  const result = getAthletePaceZone(bloc.cible_zone, performances);
+  if (!bloc.cibleZone) return "";
+  const result = getAthletePaceZone(bloc.cibleZone, performances);
   if (!result.available) return "pas de référence";
   const { minSecondsPerKm, maxSecondsPerKm } = result.range;
   return minSecondsPerKm === null
@@ -40,8 +38,14 @@ function formatCible(bloc: BlocRow, performances: PerformanceReference[]): strin
     : `${formatPaceSecondsPerKm(minSecondsPerKm)} – ${formatPaceSecondsPerKm(maxSecondsPerKm)}`;
 }
 
-function BlocRowView({ bloc, performances }: { bloc: BlocRow; performances: PerformanceReference[] }) {
-  const bg = bloc.cible_zone ? ZONE_COLORS[bloc.cible_zone] : "var(--muted)";
+function BlocRowView({
+  bloc,
+  performances,
+}: {
+  bloc: BlocDisplayItem;
+  performances: PerformanceReference[];
+}) {
+  const bg = bloc.cibleZone ? ZONE_COLORS[bloc.cibleZone] : "var(--muted)";
   const label = `${BLOC_ROLE_LABELS[bloc.role]}${
     bloc.role === "corps" ? "" : ` ${formatEffort(bloc)}`
   }`;
@@ -51,9 +55,9 @@ function BlocRowView({ bloc, performances }: { bloc: BlocRow; performances: Perf
       className="flex min-h-14 items-center gap-2.5 rounded-[3px] px-3 py-3"
       style={{ backgroundColor: bg }}
     >
-      {bloc.cible_zone && (
+      {bloc.cibleZone && (
         <span className="rounded-[2px] bg-white/60 px-[7px] py-1 text-[10px] font-bold tracking-[0.09em] uppercase">
-          {ZONE_SHORT_LABELS[bloc.cible_zone]}
+          {ZONE_SHORT_LABELS[bloc.cibleZone]}
         </span>
       )}
       <span className="flex-1 text-base font-semibold">
@@ -70,14 +74,11 @@ export function BlocList({
   blocs,
   performances,
 }: {
-  blocs: BlocRow[];
+  blocs: BlocDisplayItem[];
   performances: PerformanceReference[];
 }) {
-  const topLevel = [...blocs]
-    .filter((b) => b.parent_bloc_id === null)
-    .sort((a, b) => a.ordre - b.ordre);
-  const childrenOf = (id: string) =>
-    [...blocs].filter((b) => b.parent_bloc_id === id).sort((a, b) => a.ordre - b.ordre);
+  const topLevel = blocs.filter((b) => b.parentBlocId === null);
+  const childrenOf = (id: string) => blocs.filter((b) => b.parentBlocId === id);
 
   return (
     <div className="flex flex-col gap-1.5">

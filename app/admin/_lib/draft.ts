@@ -6,6 +6,7 @@
 import type { Database } from "@/lib/database.types";
 import type { ZoneAllure } from "@/lib/paces";
 import type { BlocSeanceInput } from "@/lib/volume";
+import type { BlocDisplayItem } from "@/lib/mappers";
 
 export type BlocRole = Database["public"]["Enums"]["bloc_role"];
 export type ModeDuree = Database["public"]["Enums"]["mode_duree"];
@@ -91,6 +92,15 @@ export function draftToBlocSeanceInput(b: DraftBloc): BlocSeanceInput {
     cibleType: b.cibleType,
     cibleZone: b.cibleZone,
     cibleAllureSecondesParKm: b.cibleAllureSecondesParKm,
+  };
+}
+
+export function draftToBlocDisplayItem(b: DraftBloc): BlocDisplayItem {
+  return {
+    ...draftToBlocSeanceInput(b),
+    role: b.role,
+    cibleRpe: b.cibleRpe,
+    commentaire: b.commentaire,
   };
 }
 

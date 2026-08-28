@@ -6,7 +6,7 @@ import { createClient } from "@/utils/supabase/server";
 import { getCurrentAthlete } from "@/app/mon-plan/_lib/current-athlete";
 import { BlocList } from "@/app/mon-plan/_components/bloc-list";
 import { ProfileBar } from "@/components/profile-bar";
-import { toBlocSeanceInput, toPerformanceReference } from "@/lib/mappers";
+import { toBlocDisplayItem, toBlocSeanceInput, toPerformanceReference } from "@/lib/mappers";
 import { computeSeanceVolume } from "@/lib/volume";
 import { computeProfileSegments } from "@/lib/profile-bar";
 import { computeCharge } from "@/lib/charge";
@@ -77,7 +77,7 @@ export default async function SeanceDetailPage({
 
       <ProfileBar segments={segments} />
 
-      <BlocList blocs={blocRows ?? []} performances={performances} />
+      <BlocList blocs={(blocRows ?? []).map(toBlocDisplayItem)} performances={performances} />
 
       {!volume.estimationComplete && (
         <p className="text-muted-foreground text-xs">
