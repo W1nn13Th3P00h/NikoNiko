@@ -8,6 +8,164 @@ import {
   identifiantToInternalEmail,
   isValidIdentifiant,
 } from "@/lib/athlete-login";
+import type { Database } from "@/lib/database.types";
+
+type DistanceRef = Database["public"]["Enums"]["distance_ref"];
+type PerformanceType = Database["public"]["Enums"]["performance_type"];
+type PrioriteCompetition = Database["public"]["Enums"]["priorite_competition"];
+
+export async function updateAthleteInfos(
+  athleteId: string,
+  data: {
+    prenom: string;
+    nom: string;
+    email: string;
+    dateNaissance: string | null;
+    fcMax: number | null;
+    fcRepos: number | null;
+    actif: boolean;
+  }
+): Promise<{ error?: string }> {
+  if (!data.prenom.trim()) return { error: "Prénom requis." };
+  if (!data.nom.trim()) return { error: "Nom requis." };
+  if (!data.email.trim()) return { error: "Email requis." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("athlete")
+    .update({
+      prenom: data.prenom.trim(),
+      nom: data.nom.trim(),
+      email: data.email.trim(),
+      date_naissance: data.dateNaissance,
+      fc_max: data.fcMax,
+      fc_repos: data.fcRepos,
+      actif: data.actif,
+    })
+    .eq("id", athleteId);
+
+  if (error) {
+    if (error.code === "23505") return { error: "Cet email est déjà utilisé par un autre athlète." };
+    return { error: error.message };
+  }
+
+  revalidatePath(`/admin/athletes/${athleteId}`);
+  return {};
+}
+
+export async function createPerformance(
+  athleteId: string,
+  data: { distance: DistanceRef; tempsSecondes: number; datePerf: string; type: PerformanceType }
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("performance_reference").insert({
+    athlete_id: athleteId,
+    distance: data.distance,
+    temps_secondes: data.tempsSecondes,
+    date_perf: data.datePerf,
+    type: data.type,
+  });
+
+  if (error) return { error: error.message };
+  revalidatePath(`/admin/athletes/${athleteId}`);
+  return {};
+}
+
+export async function updatePerformance(
+  performanceId: string,
+  athleteId: string,
+  data: { distance: DistanceRef; tempsSecondes: number; datePerf: string; type: PerformanceType }
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("performance_reference")
+    .update({
+      distance: data.distance,
+      temps_secondes: data.tempsSecondes,
+      date_perf: data.datePerf,
+      type: data.type,
+    })
+    .eq("id", performanceId);
+
+  if (error) return { error: error.message };
+  revalidatePath(`/admin/athletes/${athleteId}`);
+  return {};
+}
+
+export async function createCompetition(
+  athleteId: string,
+  data: {
+    nom: string;
+    date: string;
+    lieu: string | null;
+    distance: DistanceRef | null;
+    distanceMetresCustom: number | null;
+    objectifTempsSecondes: number | null;
+    objectifTexte: string | null;
+    priorite: PrioriteCompetition;
+  }
+): Promise<{ error?: string }> {
+  if (!data.nom.trim()) return { error: "Nom requis." };
+  if (!data.distance && !data.distanceMetresCustom) {
+    return { error: "Distance requise (standard ou personnalisée)." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("competition").insert({
+    athlete_id: athleteId,
+    nom: data.nom.trim(),
+    date: data.date,
+    lieu: data.lieu,
+    distance: data.distance,
+    distance_metres_custom: data.distanceMetresCustom,
+    objectif_temps_secondes: data.objectifTempsSecondes,
+    objectif_texte: data.objectifTexte,
+    priorite: data.priorite,
+  });
+
+  if (error) return { error: error.message };
+  revalidatePath(`/admin/athletes/${athleteId}`);
+  return {};
+}
+
+export async function updateCompetition(
+  competitionId: string,
+  athleteId: string,
+  data: {
+    nom: string;
+    date: string;
+    lieu: string | null;
+    distance: DistanceRef | null;
+    distanceMetresCustom: number | null;
+    objectifTempsSecondes: number | null;
+    objectifTexte: string | null;
+    priorite: PrioriteCompetition;
+  }
+): Promise<{ error?: string }> {
+  if (!data.nom.trim()) return { error: "Nom requis." };
+  if (!data.distance && !data.distanceMetresCustom) {
+    return { error: "Distance requise (standard ou personnalisée)." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("competition")
+    .update({
+      nom: data.nom.trim(),
+      date: data.date,
+      lieu: data.lieu,
+      distance: data.distance,
+      distance_metres_custom: data.distanceMetresCustom,
+      objectif_temps_secondes: data.objectifTempsSecondes,
+      objectif_texte: data.objectifTexte,
+      priorite: data.priorite,
+    })
+    .eq("id", competitionId);
+
+  if (error) return { error: error.message };
+  revalidatePath(`/admin/athletes/${athleteId}`);
+  return {};
+}
 
 export async function saveAthleteNote(athleteId: string, formData: FormData) {
   const contenu = formData.get("contenu");

@@ -215,3 +215,11 @@ export function formatDurationHMS(totalSeconds: number): string {
   }
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
+
+/** Parses "h:mm:ss" or "m:ss" back into seconds. Inverse of formatDurationHMS. Null if unparsable. */
+export function parseDurationHMS(input: string): number | null {
+  const parts = input.trim().split(":");
+  if (parts.length === 0 || parts.length > 3 || parts.some((p) => !/^\d+$/.test(p))) return null;
+  const seconds = parts.reduce((acc, p) => acc * 60 + Number(p), 0);
+  return seconds > 0 ? seconds : null;
+}

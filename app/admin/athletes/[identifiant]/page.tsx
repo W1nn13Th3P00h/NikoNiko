@@ -18,6 +18,7 @@ import {
 } from "@/lib/paces";
 import {
   Card,
+  CardAction,
   CardContent,
   CardHeader,
   CardTitle,
@@ -35,6 +36,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { saveAthleteNote } from "./actions";
 import { CredentialsForm } from "./_components/credentials-form";
+import { AthleteInfoForm } from "./_components/athlete-info-form";
+import { PerformanceDialog } from "./_components/performance-dialog";
+import { CompetitionDialog } from "./_components/competition-dialog";
 
 const ZONE_ORDER: ZoneAllure[] = [
   "z1_recup",
@@ -104,29 +108,28 @@ export default async function AthleteDetailPage({
         <CardHeader>
           <CardTitle>Infos</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
-          <div>
-            <p className="text-muted-foreground">Date de naissance</p>
-            <p>{athlete.date_naissance ? format(new Date(athlete.date_naissance), "dd/MM/yyyy") : "—"}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground">FC max</p>
-            <p>{athlete.fc_max ?? "—"}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground">FC repos</p>
-            <p>{athlete.fc_repos ?? "—"}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground">Statut</p>
-            <p>{athlete.actif ? "Actif" : "Inactif"}</p>
-          </div>
+        <CardContent>
+          <AthleteInfoForm
+            athleteId={athlete.id}
+            initial={{
+              prenom: athlete.prenom,
+              nom: athlete.nom,
+              email: athlete.email,
+              dateNaissance: athlete.date_naissance,
+              fcMax: athlete.fc_max,
+              fcRepos: athlete.fc_repos,
+              actif: athlete.actif,
+            }}
+          />
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
           <CardTitle>Performances de référence</CardTitle>
+          <CardAction>
+            <PerformanceDialog athleteId={athlete.id} trigger={<Button size="sm">+ Ajouter</Button>} />
+          </CardAction>
         </CardHeader>
         <CardContent>
           {performances.length === 0 ? (
@@ -141,6 +144,7 @@ export default async function AthleteDetailPage({
                   <TableHead>Temps</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Type</TableHead>
+                  <TableHead></TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
@@ -158,6 +162,23 @@ export default async function AthleteDetailPage({
                       <TableCell>{PERFORMANCE_TYPE_LABELS[row.type]}</TableCell>
                       <TableCell>
                         {isBase && <Badge variant="secondary">Référence retenue</Badge>}
+                      </TableCell>
+                      <TableCell>
+                        <PerformanceDialog
+                          athleteId={athlete.id}
+                          existing={{
+                            id: row.id,
+                            distance: row.distance,
+                            tempsSecondes: row.temps_secondes,
+                            datePerf: row.date_perf,
+                            type: row.type,
+                          }}
+                          trigger={
+                            <Button variant="ghost" size="sm">
+                              Éditer
+                            </Button>
+                          }
+                        />
                       </TableCell>
                     </TableRow>
                   );
@@ -211,6 +232,9 @@ export default async function AthleteDetailPage({
       <Card>
         <CardHeader>
           <CardTitle>Compétitions à venir</CardTitle>
+          <CardAction>
+            <CompetitionDialog athleteId={athlete.id} trigger={<Button size="sm">+ Ajouter</Button>} />
+          </CardAction>
         </CardHeader>
         <CardContent>
           {(competitions ?? []).length === 0 ? (
@@ -218,12 +242,31 @@ export default async function AthleteDetailPage({
           ) : (
             <ul className="flex flex-col gap-2 text-sm">
               {(competitions ?? []).map((c) => (
-                <li key={c.id} className="flex items-center justify-between">
+                <li key={c.id} className="flex items-center justify-between gap-3">
                   <span>
                     {c.nom} {c.lieu ? `— ${c.lieu}` : ""}
                   </span>
-                  <span className="text-muted-foreground">
+                  <span className="flex items-center gap-3 text-muted-foreground">
                     {format(new Date(c.date), "dd/MM/yyyy")} ({c.priorite})
+                    <CompetitionDialog
+                      athleteId={athlete.id}
+                      existing={{
+                        id: c.id,
+                        nom: c.nom,
+                        date: c.date,
+                        lieu: c.lieu,
+                        distance: c.distance,
+                        distanceMetresCustom: c.distance_metres_custom,
+                        objectifTempsSecondes: c.objectif_temps_secondes,
+                        objectifTexte: c.objectif_texte,
+                        priorite: c.priorite,
+                      }}
+                      trigger={
+                        <Button variant="ghost" size="sm">
+                          Éditer
+                        </Button>
+                      }
+                    />
                   </span>
                 </li>
               ))}
