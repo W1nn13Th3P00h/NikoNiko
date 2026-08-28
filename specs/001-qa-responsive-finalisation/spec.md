@@ -86,7 +86,7 @@ Un utilisateur (coach ou athlète) ouvre l'application sur une largeur d'écran 
 
 ### Measurable Outcomes
 
-- **SC-001**: 100% des pages du périmètre (liste ci-dessus, parcours admin et athlète) s'affichent sans défilement horizontal involontaire sur les largeurs de référence mobile (320px, 375px) et desktop (1280px, 1440px).
+- **SC-001**: 100% des pages du périmètre s'affichent sans défilement horizontal involontaire sur leurs largeurs de référence respectives : 320px/375px pour les pages du parcours athlète (FR-001), 1280px/1440px pour les pages du parcours admin (FR-003).
 - **SC-002**: Un athlète peut, sur téléphone, aller de l'accueil jusqu'à l'envoi d'un retour de séance sans avoir besoin de zoomer ni de faire défiler horizontalement à aucune étape.
 - **SC-003**: Un coach peut, sur desktop, réaliser une action de bout en bout par page du périmètre (ex: déplacer une séance dans le calendrier, éditer et sauvegarder une séance, filtrer la bibliothèque) sans qu'un défaut d'affichage n'interrompe l'action.
 - **SC-004**: Zéro élément interactif masqué ou inatteignable constaté lors d'un passage manuel sur chacune des pages du périmètre aux largeurs de référence.
