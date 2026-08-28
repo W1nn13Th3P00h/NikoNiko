@@ -1,16 +1,17 @@
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { differenceInCalendarDays } from "date-fns";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { getCurrentAthlete } from "@/app/mon-plan/_lib/current-athlete";
 import { BlocList } from "@/app/mon-plan/_components/bloc-list";
+import { ProfileBar } from "@/components/profile-bar";
 import { toBlocSeanceInput, toPerformanceReference } from "@/lib/mappers";
 import { computeSeanceVolume } from "@/lib/volume";
+import { computeProfileSegments } from "@/lib/profile-bar";
+import { computeCharge } from "@/lib/charge";
 import { nowInParis } from "@/lib/date";
-import { RETOUR_STATUT_LABELS, SEANCE_TYPE_LABELS } from "@/lib/labels";
-import { Badge } from "@/components/ui/badge";
-import { RetourForm } from "./_components/retour-form";
+import { Button } from "@/components/ui/button";
 
 export default async function SeanceDetailPage({
   params,
@@ -43,76 +44,72 @@ export default async function SeanceDetailPage({
   if (!seance) notFound();
 
   const performances = (performanceRows ?? []).map(toPerformanceReference);
-  const volume = computeSeanceVolume((blocRows ?? []).map(toBlocSeanceInput), performances);
+  const blocInputs = (blocRows ?? []).map(toBlocSeanceInput);
+  const volume = computeSeanceVolume(blocInputs, performances);
+  const segments = computeProfileSegments(blocInputs, performances);
+  const charge = retour?.rpe ? computeCharge(volume.dureeMinutes, retour.rpe) : null;
 
-  const today = nowInParis();
-  const todayStr = format(today, "yyyy-MM-dd");
+  const todayStr = format(nowInParis(), "yyyy-MM-dd");
   const isPast = seance.date_prevue !== null && seance.date_prevue <= todayStr;
-  const daysSince = seance.date_prevue
-    ? differenceInCalendarDays(today, new Date(seance.date_prevue))
-    : 0;
-  const editable = daysSince <= 7;
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary">{SEANCE_TYPE_LABELS[seance.type]}</Badge>
-          {seance.date_prevue && (
-            <span className="text-muted-foreground text-sm capitalize">
-              {format(new Date(seance.date_prevue), "EEEE dd MMMM", { locale: fr })}
-            </span>
-          )}
-        </div>
-        <h1 className="mt-1 text-2xl font-bold">{seance.titre}</h1>
-        {seance.objectif && <p className="text-lg">{seance.objectif}</p>}
-      </div>
-
-      <div className="rounded-lg bg-muted p-4">
-        <p className="text-3xl font-bold">{volume.distanceKm} km</p>
-        <p className="text-muted-foreground">{volume.dureeMinutes} min</p>
-        {!volume.estimationComplete && (
-          <p className="text-muted-foreground mt-1 text-xs">
-            Estimation partielle — ajoute un temps de référence pour affiner.
-          </p>
+      <div className="flex items-center gap-1 -mt-1 -ml-2">
+        <Link href="/mon-plan/calendrier" aria-label="Retour" className="flex size-11 items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 5l-7 7 7 7" />
+          </svg>
+        </Link>
+        {seance.date_prevue && (
+          <span className="font-mono text-xs tracking-[0.1em] text-muted-foreground uppercase">
+            {format(new Date(seance.date_prevue), "EEEE dd MMMM", { locale: fr })}
+          </span>
         )}
       </div>
 
+      <div className="flex flex-col gap-2">
+        <h1 className="text-[34px] leading-[1.05] font-bold tracking-tight">{seance.titre}</h1>
+        <p className="font-mono text-sm font-medium text-[#3D4B50]">
+          {volume.distanceKm} km · {volume.dureeMinutes} min
+          {charge !== null ? ` · charge estimée ${charge}` : ""}
+        </p>
+      </div>
+
+      <ProfileBar segments={segments} />
+
       <BlocList blocs={blocRows ?? []} performances={performances} />
 
-      {seance.consignes && (
-        <div>
-          <h2 className="text-muted-foreground text-sm font-semibold uppercase">Consignes</h2>
-          <p>{seance.consignes}</p>
+      {!volume.estimationComplete && (
+        <p className="text-muted-foreground text-xs">
+          Estimation partielle — ajoute un temps de référence pour affiner.
+        </p>
+      )}
+
+      {seance.objectif && (
+        <div className="rounded-lg border bg-card p-4">
+          <h2 className="mb-1 text-xs font-bold tracking-[0.09em] text-muted-foreground uppercase">
+            Objectif
+          </h2>
+          <p className="font-serif text-base text-[#3D4B50]">{seance.objectif}</p>
         </div>
       )}
 
-      {isPast &&
-        (editable ? (
-          <RetourForm
-            seanceId={seance.id}
-            athleteId={athlete.id}
-            initialStatut={retour?.statut ?? null}
-            initialRpe={retour?.rpe ?? null}
-            initialCommentaire={retour?.commentaire ?? null}
-          />
-        ) : retour ? (
-          <div className="rounded-lg border p-4">
-            <p className="font-medium">Ton retour</p>
-            <p>
-              {RETOUR_STATUT_LABELS[retour.statut]}
-              {retour.rpe ? ` · RPE ${retour.rpe}` : ""}
-            </p>
-            {retour.commentaire && <p className="text-sm">{retour.commentaire}</p>}
-            <p className="text-muted-foreground mt-1 text-xs">
-              Non modifiable après 7 jours.
-            </p>
-          </div>
-        ) : (
-          <p className="text-muted-foreground text-sm">
-            Trop tard pour laisser un retour sur cette séance (plus de 7 jours).
-          </p>
-        ))}
+      {seance.consignes && (
+        <div className="rounded-lg border bg-card p-4">
+          <h2 className="mb-1 text-xs font-bold tracking-[0.09em] text-muted-foreground uppercase">
+            Consignes du coach
+          </h2>
+          <p className="font-serif text-base text-[#3D4B50]">{seance.consignes}</p>
+        </div>
+      )}
+
+      {isPast && (
+        <Link href={`/mon-plan/seances/${seance.id}/retour`}>
+          <Button className="w-full" size="lg" variant={retour ? "outline" : "default"}>
+            {retour ? "Voir mon retour" : "Laisser un retour"}
+          </Button>
+        </Link>
+      )}
     </div>
   );
 }

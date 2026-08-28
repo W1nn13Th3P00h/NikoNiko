@@ -1,12 +1,13 @@
 import type { Database } from "@/lib/database.types";
 import { BLOC_ROLE_LABELS } from "@/lib/labels";
 import {
-  ZONE_LABELS,
+  ZONE_SHORT_LABELS,
   formatDurationHMS,
   formatPaceSecondsPerKm,
   getAthletePaceZone,
   type PerformanceReference,
 } from "@/lib/paces";
+import { ZONE_COLORS } from "@/lib/zone-colors";
 
 type BlocRow = Database["public"]["Tables"]["bloc_seance"]["Row"];
 
@@ -32,15 +33,37 @@ function formatCible(bloc: BlocRow, performances: PerformanceReference[]): strin
   }
   if (!bloc.cible_zone) return "";
   const result = getAthletePaceZone(bloc.cible_zone, performances);
-  if (!result.available) {
-    return `${ZONE_LABELS[bloc.cible_zone]} (ajoute un temps de référence pour voir ton allure)`;
-  }
+  if (!result.available) return "pas de référence";
   const { minSecondsPerKm, maxSecondsPerKm } = result.range;
-  const paceLabel =
-    minSecondsPerKm === null
-      ? `< ${formatPaceSecondsPerKm(maxSecondsPerKm)}`
-      : `${formatPaceSecondsPerKm(minSecondsPerKm)} – ${formatPaceSecondsPerKm(maxSecondsPerKm)}`;
-  return `${ZONE_LABELS[bloc.cible_zone]} · ${paceLabel}`;
+  return minSecondsPerKm === null
+    ? `< ${formatPaceSecondsPerKm(maxSecondsPerKm)}`
+    : `${formatPaceSecondsPerKm(minSecondsPerKm)} – ${formatPaceSecondsPerKm(maxSecondsPerKm)}`;
+}
+
+function BlocRowView({ bloc, performances }: { bloc: BlocRow; performances: PerformanceReference[] }) {
+  const bg = bloc.cible_zone ? ZONE_COLORS[bloc.cible_zone] : "var(--muted)";
+  const label = `${BLOC_ROLE_LABELS[bloc.role]}${
+    bloc.role === "corps" ? "" : ` ${formatEffort(bloc)}`
+  }`;
+
+  return (
+    <div
+      className="flex min-h-14 items-center gap-2.5 rounded-[3px] px-3 py-3"
+      style={{ backgroundColor: bg }}
+    >
+      {bloc.cible_zone && (
+        <span className="rounded-[2px] bg-white/60 px-[7px] py-1 text-[10px] font-bold tracking-[0.09em] uppercase">
+          {ZONE_SHORT_LABELS[bloc.cible_zone]}
+        </span>
+      )}
+      <span className="flex-1 text-base font-semibold">
+        {bloc.role === "corps" ? formatEffort(bloc) : label}
+      </span>
+      <span className="font-mono text-sm font-medium tabular-nums">
+        {formatCible(bloc, performances)}
+      </span>
+    </div>
+  );
 }
 
 export function BlocList({
@@ -57,34 +80,31 @@ export function BlocList({
     [...blocs].filter((b) => b.parent_bloc_id === id).sort((a, b) => a.ordre - b.ordre);
 
   return (
-    <ol className="flex flex-col gap-3">
+    <div className="flex flex-col gap-1.5">
       {topLevel.map((bloc) => {
         const children = childrenOf(bloc.id);
+        if (children.length === 0) {
+          return (
+            <div key={bloc.id}>
+              <BlocRowView bloc={bloc} performances={performances} />
+              {bloc.commentaire && <p className="mt-1 text-sm">{bloc.commentaire}</p>}
+            </div>
+          );
+        }
         return (
-          <li key={bloc.id} className="rounded-lg border p-3">
-            <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-              {BLOC_ROLE_LABELS[bloc.role]}
-              {bloc.repetitions > 1 ? ` · ${bloc.repetitions}×` : ""}
+          <div key={bloc.id} className="mt-1.5 flex flex-col gap-1.5 border-l-[3px] pl-2.5">
+            <p className="text-[11px] font-bold tracking-[0.1em] text-muted-foreground uppercase">
+              {bloc.repetitions} × répétitions
             </p>
-            {children.length > 0 ? (
-              <ol className="mt-1.5 flex flex-col gap-2">
-                {children.map((child) => (
-                  <li key={child.id} className="flex items-baseline justify-between gap-3">
-                    <span className="text-lg font-bold">{formatEffort(child)}</span>
-                    <span className="text-right text-sm">{formatCible(child, performances)}</span>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <div className="mt-1.5 flex items-baseline justify-between gap-3">
-                <span className="text-lg font-bold">{formatEffort(bloc)}</span>
-                <span className="text-right text-sm">{formatCible(bloc, performances)}</span>
+            {children.map((child) => (
+              <div key={child.id}>
+                <BlocRowView bloc={child} performances={performances} />
+                {child.commentaire && <p className="mt-1 text-sm">{child.commentaire}</p>}
               </div>
-            )}
-            {bloc.commentaire && <p className="mt-1 text-sm">{bloc.commentaire}</p>}
-          </li>
+            ))}
+          </div>
         );
       })}
-    </ol>
+    </div>
   );
 }

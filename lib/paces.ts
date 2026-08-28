@@ -80,6 +80,15 @@ export const ZONE_LABELS: Record<ZoneAllure, string> = {
   z6_anaerobie: "Z6 — Anaérobie",
 };
 
+export const ZONE_SHORT_LABELS: Record<ZoneAllure, string> = {
+  z1_recup: "Z1",
+  z2_endurance: "Z2",
+  z3_marathon: "Z3",
+  z4_seuil: "Z4",
+  z5_vma: "Z5",
+  z6_anaerobie: "Z6",
+};
+
 export const DISTANCE_LABELS: Record<DistanceRef, string> = {
   "5k": "5 km",
   "10k": "10 km",

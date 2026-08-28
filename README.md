@@ -1,4 +1,4 @@
-# App Coaching
+# NikoNiko
 
 Application web de suivi de plans d'entraînement en course à pied. Un coach administre, les athlètes consultent leurs séances.
 

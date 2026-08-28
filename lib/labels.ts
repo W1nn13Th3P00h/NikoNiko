@@ -33,16 +33,16 @@ export const CIBLE_TYPE_LABELS: Record<CibleType, string> = {
 };
 
 export const RPE_LABELS: Record<number, string> = {
-  1: "Très facile",
-  2: "Facile",
-  3: "Facile +",
-  4: "Modéré",
-  5: "Modéré +",
-  6: "Soutenu",
-  7: "Difficile",
-  8: "Très difficile",
-  9: "Quasi maximal",
-  10: "Maximal",
+  1: "très facile",
+  2: "facile",
+  3: "modéré",
+  4: "un peu dur",
+  5: "assez dur",
+  6: "dur",
+  7: "très dur",
+  8: "très très dur",
+  9: "extrême",
+  10: "maximal",
 };
 
 export const RETOUR_STATUT_LABELS: Record<RetourStatut, string> = {

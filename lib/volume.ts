@@ -65,7 +65,7 @@ function resolvePaceSecondsPerKm(
   return { paceSecondsPerKm: null, missingReference: false };
 }
 
-function computeBlocOwnVolume(
+export function computeBlocOwnVolume(
   bloc: BlocSeanceInput,
   performances: PerformanceReference[]
 ): SubtreeVolume & { missingReference: boolean } {

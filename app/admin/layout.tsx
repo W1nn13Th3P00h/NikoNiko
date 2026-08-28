@@ -7,8 +7,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="min-h-dvh">
       <header className="flex items-center justify-between border-b px-6 py-3">
         <div className="flex items-center gap-6">
-          <Link href="/admin" className="font-semibold">
-            App Coaching — Coach
+          <Link
+            href="/admin"
+            className="text-xs font-bold tracking-[0.14em] uppercase text-muted-foreground"
+          >
+            NikoNiko
           </Link>
           <nav className="flex gap-4 text-sm">
             <Link href="/admin" className="hover:underline">
@@ -28,7 +31,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Button>
         </form>
       </header>
-      <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>
+      <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
     </div>
   );
 }

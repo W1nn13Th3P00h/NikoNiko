@@ -1,15 +1,19 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { RPE_LABELS, RETOUR_STATUT_LABELS } from "@/lib/labels";
+import { RPE_LABELS } from "@/lib/labels";
+import { computeCharge } from "@/lib/charge";
 import type { Database } from "@/lib/database.types";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { submitRetour } from "../actions";
 
 type RetourStatut = Database["public"]["Enums"]["retour_statut"];
 
-const STATUT_OPTIONS: RetourStatut[] = ["fait", "partiel", "non_fait"];
+const STATUT_OPTIONS: { value: RetourStatut; label: string }[] = [
+  { value: "fait", label: "Faite" },
+  { value: "partiel", label: "En partie" },
+  { value: "non_fait", label: "Pas faite" },
+];
 const RPE_SCALE = Array.from({ length: 10 }, (_, i) => i + 1);
 
 // Statut (1 tap) + RPE (1 tap, skipped for "non_fait") + Envoyer (1 tap):
@@ -18,12 +22,14 @@ const RPE_SCALE = Array.from({ length: 10 }, (_, i) => i + 1);
 export function RetourForm({
   seanceId,
   athleteId,
+  dureeMinutesPrevue,
   initialStatut,
   initialRpe,
   initialCommentaire,
 }: {
   seanceId: string;
   athleteId: string;
+  dureeMinutesPrevue: number;
   initialStatut: RetourStatut | null;
   initialRpe: number | null;
   initialCommentaire: string | null;
@@ -52,28 +58,38 @@ export function RetourForm({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex gap-2">
-        {STATUT_OPTIONS.map((opt) => (
-          <button
-            key={opt}
-            type="button"
-            onClick={() => {
-              setStatut(opt);
-              setSent(false);
-            }}
-            className={`flex-1 rounded-lg border py-3 text-sm font-medium ${
-              statut === opt ? "border-primary bg-primary text-primary-foreground" : ""
-            }`}
-          >
-            {RETOUR_STATUT_LABELS[opt]}
-          </button>
-        ))}
+    <div className="flex flex-col gap-[22px]">
+      <div className="flex flex-col gap-2.5">
+        <p className="text-xs font-bold tracking-[0.09em] text-muted-foreground uppercase">
+          Tu l&apos;as faite ?
+        </p>
+        <div className="flex gap-2">
+          {STATUT_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                setStatut(opt.value);
+                setSent(false);
+              }}
+              className={`h-[58px] flex-1 rounded-[4px] text-[15px] font-semibold ${
+                statut === opt.value
+                  ? "bg-primary text-primary-foreground"
+                  : "border bg-card"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {needsRpe && (
-        <div>
-          <div className="grid grid-cols-5 gap-2">
+        <div className="flex flex-col gap-2.5">
+          <p className="text-xs font-bold tracking-[0.09em] text-muted-foreground uppercase">
+            Comment c&apos;était ?
+          </p>
+          <div className="grid grid-cols-5 gap-1.5">
             {RPE_SCALE.map((n) => (
               <button
                 key={n}
@@ -82,32 +98,43 @@ export function RetourForm({
                   setRpe(n);
                   setSent(false);
                 }}
-                className={`rounded-lg border py-2 text-lg font-bold ${
-                  rpe === n ? "border-primary bg-primary text-primary-foreground" : ""
+                className={`flex h-[82px] flex-col items-center justify-center gap-1 rounded-[4px] p-1 ${
+                  rpe === n ? "bg-primary text-primary-foreground" : "border"
                 }`}
               >
-                {n}
+                <span className="font-mono text-xl leading-none font-semibold">{n}</span>
+                <span className="text-center text-[10px] leading-tight opacity-80">
+                  {RPE_LABELS[n]}
+                </span>
               </button>
             ))}
           </div>
           {rpe !== null && (
-            <p className="text-muted-foreground mt-1 text-center text-sm">{RPE_LABELS[rpe]}</p>
+            <p className="font-mono text-xs text-muted-foreground">
+              {dureeMinutesPrevue} min × RPE {rpe} = charge {computeCharge(dureeMinutesPrevue, rpe)}
+            </p>
           )}
         </div>
       )}
 
-      <Textarea
-        placeholder="Commentaire (optionnel)"
-        value={commentaire}
-        onChange={(e) => {
-          setCommentaire(e.target.value);
-          setSent(false);
-        }}
-        rows={2}
-      />
+      <div className="flex flex-col gap-2.5">
+        <p className="text-xs text-muted-foreground">
+          <span className="font-bold tracking-[0.09em] uppercase">Un mot ?</span>{" "}
+          <span className="text-[13px]">facultatif</span>
+        </p>
+        <textarea
+          value={commentaire}
+          onChange={(e) => {
+            setCommentaire(e.target.value);
+            setSent(false);
+          }}
+          rows={4}
+          className="min-h-24 rounded-[4px] border bg-card p-3.5 font-serif text-base leading-[1.5]"
+        />
+      </div>
 
-      <Button onClick={handleSubmit} disabled={!canSubmit || isPending} size="lg">
-        {isPending ? "Envoi…" : sent ? "Retour envoyé ✓" : "Envoyer"}
+      <Button onClick={handleSubmit} disabled={!canSubmit || isPending} size="lg" className="h-14">
+        {isPending ? "Envoi…" : sent ? "Retour envoyé ✓" : "Envoyer à Jérémie"}
       </Button>
     </div>
   );
