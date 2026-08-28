@@ -5,10 +5,9 @@ import { createClient } from "@/utils/supabase/server";
 import { identifiantToInternalEmail } from "@/lib/athlete-login";
 import { resolvePostLoginPath } from "@/lib/auth-destination";
 
-// One form for everyone. An athlete's identifiant never contains "@" (see
-// IDENTIFIANT_PATTERN in athlete-login.ts), so that's the only signal we
-// need to tell an athlete's identifiant apart from the coach's real email
-// — no extra lookup, no separate admin identifiant to maintain.
+// One form, one mechanism for everyone (coach included): every identifiant
+// maps to the same synthetic internal email scheme, so this never needs to
+// know or care who it's signing in.
 export async function signIn(formData: FormData) {
   const identifiant = formData.get("identifiant");
   const password = formData.get("password");
@@ -22,8 +21,7 @@ export async function signIn(formData: FormData) {
     redirect("/login?error=Identifiant+et+mot+de+passe+requis");
   }
 
-  const trimmed = identifiant.trim();
-  const email = trimmed.includes("@") ? trimmed : identifiantToInternalEmail(trimmed.toLowerCase());
+  const email = identifiantToInternalEmail(identifiant.trim().toLowerCase());
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
