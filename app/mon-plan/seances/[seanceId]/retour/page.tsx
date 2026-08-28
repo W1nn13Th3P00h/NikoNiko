@@ -1,4 +1,4 @@
-import { differenceInCalendarDays, format } from "date-fns";
+import { differenceInCalendarDays, format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -15,7 +15,7 @@ export default async function RetourSeancePage({
   params: Promise<{ seanceId: string }>;
 }) {
   const athlete = await getCurrentAthlete();
-  if (!athlete) notFound();
+  if (!athlete) redirect("/login");
 
   const { seanceId } = await params;
   const supabase = await createClient();
@@ -46,7 +46,7 @@ export default async function RetourSeancePage({
 
   const performances = (performanceRows ?? []).map(toPerformanceReference);
   const volume = computeSeanceVolume((blocRows ?? []).map(toBlocSeanceInput), performances);
-  const daysSince = differenceInCalendarDays(nowInParis(), new Date(seance.date_prevue));
+  const daysSince = differenceInCalendarDays(parseISO(todayStr), parseISO(seance.date_prevue));
   const editable = daysSince <= 7;
 
   return (
@@ -68,7 +68,7 @@ export default async function RetourSeancePage({
         <div className="flex flex-1 flex-col gap-0.5">
           <span className="text-[15px] font-semibold">{seance.titre}</span>
           <span className="font-mono text-xs text-muted-foreground">
-            {format(new Date(seance.date_prevue), "EEEE dd MMMM", { locale: fr })} · {volume.distanceKm} km
+            {format(parseISO(seance.date_prevue), "EEEE dd MMMM", { locale: fr })} · {volume.distanceKm} km
           </span>
         </div>
       </div>

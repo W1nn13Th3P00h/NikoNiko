@@ -39,21 +39,27 @@ export function RetourForm({
   const [commentaire, setCommentaire] = useState(initialCommentaire ?? "");
   const [isPending, startTransition] = useTransition();
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState(false);
 
   const needsRpe = statut === "fait" || statut === "partiel";
   const canSubmit = statut !== null && (!needsRpe || rpe !== null);
 
   function handleSubmit() {
     if (!statut) return;
+    setError(false);
     startTransition(async () => {
-      await submitRetour(
-        seanceId,
-        athleteId,
-        statut,
-        needsRpe ? rpe : null,
-        commentaire.trim() || null
-      );
-      setSent(true);
+      try {
+        await submitRetour(
+          seanceId,
+          athleteId,
+          statut,
+          needsRpe ? rpe : null,
+          commentaire.trim() || null
+        );
+        setSent(true);
+      } catch {
+        setError(true);
+      }
     });
   }
 
@@ -133,6 +139,9 @@ export function RetourForm({
         />
       </div>
 
+      {error && (
+        <p className="text-destructive text-sm">Échec de l&apos;envoi, réessaie.</p>
+      )}
       <Button onClick={handleSubmit} disabled={!canSubmit || isPending} size="lg" className="h-14">
         {isPending ? "Envoi…" : sent ? "Retour envoyé ✓" : "Envoyer à Jérémie"}
       </Button>

@@ -129,8 +129,9 @@ export async function moveSeanceDate(seanceId: string, newDate: string) {
 
 export async function deleteSeance(seanceId: string) {
   const supabase = await createClient();
-  await supabase.from("seance").delete().eq("id", seanceId);
+  const { error } = await supabase.from("seance").delete().eq("id", seanceId);
   revalidatePath("/admin", "layout");
+  return { error: error ? error.message : null };
 }
 
 export async function duplicateWeek(

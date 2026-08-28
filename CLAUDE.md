@@ -16,7 +16,7 @@ Application privée de suivi de plans d'entraînement en course à pied. Un coac
 - Tailwind CSS + shadcn/ui
 - date-fns, timezone Europe/Paris, semaines commençant le lundi
 - Vitest pour les tests unitaires
-- Déploiement cible : Vercel
+- Déploiement cible : Netlify (build Next.js via `@netlify/plugin-nextjs`, déclenché sur push vers `main`)
 
 Pas de state manager global tant que le besoin n'est pas prouvé.
 
@@ -108,7 +108,8 @@ Import Strava/Garmin, notifications, export FIT effectif, multi-coach, graphique
 - [x] Étape 5 — Admin : calendrier (`/admin/athletes/[identifiant]/calendrier`, vues mois/semaine × détaillé/compact, drag and drop, ajout bibliothèque/custom, duplication de semaine). Redessiné selon la maquette : sidebar switcher d'athlète + zones de référence toujours visibles, barre colorée par type de séance, barre de statut retour (plein/rayé/gris), volume réel/prévu en case, compétitions intégrées à la grille
 - [x] Étape 6 — Éditeur de séance (`/admin/athletes/[identifiant]/seances/[seanceId]`), Bibliothèque (`/admin/bibliotheque`, filtre type + recherche titre — pas de filtre "tag" : ce champ n'existe pas dans le modèle de données malgré la mention dans le prompt initial), Retours (`/admin/retours`, chronologique, 100 derniers)
 - [x] Étape 7 — Athlète (`/mon-plan`)
-- [ ] Étape 8 — QA responsive + finalisation (spec-kit `specs/001-qa-responsive-finalisation/`). Audit statique effectué (pas d'accès navigateur dans cette session) : 2 bugs réels corrigés (calendrier admin sans protection de débordement horizontal ; aperçu live de l'éditeur de séance en largeur fixe qui poussait l'éditeur hors écran sous ~1050px) + 1 amélioration mineure (filtres bibliothèque). Reste à faire : validation visuelle réelle dans un navigateur (T007, T015, T016, T019 de `tasks.md`) avant de cocher cette étape.
+- [x] Étape 8 — QA responsive + finalisation (page d'accueil, `error.tsx`/`not-found.tsx`/`robots.ts`, safe-area iOS sur la nav mobile, confirmations et retours d'erreur sur les actions destructrices ou fire-and-forget, états vides manquants, petites incohérences de fuseau horaire et d'accessibilité)
+(spec-kit `specs/001-qa-responsive-finalisation/`). Audit statique effectué (pas d'accès navigateur dans cette session) : 2 bugs réels corrigés (calendrier admin sans protection de débordement horizontal ; aperçu live de l'éditeur de séance en largeur fixe qui poussait l'éditeur hors écran sous ~1050px) + 1 amélioration mineure (filtres bibliothèque). Reste à faire : validation visuelle réelle dans un navigateur (T007, T015, T016, T019 de `tasks.md`) avant de cocher cette étape.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
