@@ -9,6 +9,7 @@ import {
   ZONE_LABELS,
   type PerformanceReference,
   type ZoneAllure,
+  type ZoneManualOverrides,
 } from "@/lib/paces";
 import {
   BLOC_ROLE_LABELS,
@@ -60,7 +61,11 @@ const ZONE_OPTIONS: ZoneAllure[] = [
   "z6_anaerobie",
 ];
 
-function realPacePreview(bloc: DraftBloc, performances: PerformanceReference[]): string {
+function realPacePreview(
+  bloc: DraftBloc,
+  performances: PerformanceReference[],
+  overrides: ZoneManualOverrides
+): string {
   if (bloc.cibleType === "libre") return "Libre";
   if (bloc.cibleType === "rpe") return `RPE ${bloc.cibleRpe ?? "—"}`;
   if (bloc.cibleType === "allure_absolue") {
@@ -68,7 +73,7 @@ function realPacePreview(bloc: DraftBloc, performances: PerformanceReference[]):
   }
   // zone_allure / zone_fc
   if (!bloc.cibleZone) return "—";
-  const result = getAthletePaceZone(bloc.cibleZone, performances);
+  const result = getAthletePaceZone(bloc.cibleZone, performances, overrides);
   if (!result.available) return `${ZONE_LABELS[bloc.cibleZone]} (pas de référence)`;
   const { minSecondsPerKm, maxSecondsPerKm } = result.range;
   return minSecondsPerKm === null
@@ -81,6 +86,7 @@ export function SeanceEditor({
   seance,
   initialBlocs,
   performances,
+  zoneOverrides = {},
   redirectPath,
   allowSaveAsLibraryCopy,
   retour = null,
@@ -92,6 +98,7 @@ export function SeanceEditor({
   seance: SeanceRow;
   initialBlocs: DraftBloc[];
   performances: PerformanceReference[];
+  zoneOverrides?: ZoneManualOverrides;
   redirectPath: string;
   allowSaveAsLibraryCopy: boolean;
   // The athlete's own retour on this séance, read-only here — only they
@@ -113,8 +120,8 @@ export function SeanceEditor({
   const childrenOf = (parentClientId: string) =>
     blocs.filter((b) => b.parentClientId === parentClientId);
 
-  const volume = computeSeanceVolume(blocs.map(draftToBlocSeanceInput), performances);
-  const segments = computeProfileSegments(blocs.map(draftToBlocSeanceInput), performances);
+  const volume = computeSeanceVolume(blocs.map(draftToBlocSeanceInput), performances, zoneOverrides);
+  const segments = computeProfileSegments(blocs.map(draftToBlocSeanceInput), performances, zoneOverrides);
 
   function updateBloc(clientId: string, patch: Partial<DraftBloc>) {
     setBlocs((prev) => prev.map((b) => (b.clientId === clientId ? { ...b, ...patch } : b)));
@@ -281,6 +288,7 @@ export function SeanceEditor({
                   <BlocRowEditor
                     bloc={bloc}
                     performances={performances}
+                    zoneOverrides={zoneOverrides}
                     onChange={(patch) => updateBloc(bloc.clientId, patch)}
                     onRemove={() => {
                       const childCount = childrenOf(bloc.clientId).length;
@@ -303,6 +311,7 @@ export function SeanceEditor({
                         key={child.clientId}
                         bloc={child}
                         performances={performances}
+                        zoneOverrides={zoneOverrides}
                         onChange={(patch) => updateBloc(child.clientId, patch)}
                         onRemove={() => removeBloc(child.clientId)}
                         onDuplicate={() => duplicateBloc(child.clientId)}
@@ -337,7 +346,11 @@ export function SeanceEditor({
 
             <ProfileBar segments={segments} />
 
-            <BlocList blocs={blocs.map(draftToBlocDisplayItem)} performances={performances} />
+            <BlocList
+              blocs={blocs.map(draftToBlocDisplayItem)}
+              performances={performances}
+              zoneOverrides={zoneOverrides}
+            />
 
             {!volume.estimationComplete && (
               <p className="text-muted-foreground text-xs">
@@ -397,6 +410,7 @@ export function SeanceEditor({
 function BlocRowEditor({
   bloc,
   performances,
+  zoneOverrides,
   onChange,
   onRemove,
   onDuplicate,
@@ -405,6 +419,7 @@ function BlocRowEditor({
 }: {
   bloc: DraftBloc;
   performances: PerformanceReference[];
+  zoneOverrides: ZoneManualOverrides;
   onChange: (patch: Partial<DraftBloc>) => void;
   onRemove: () => void;
   onDuplicate: () => void;
@@ -585,7 +600,7 @@ function BlocRowEditor({
         </div>
       </div>
       <p className="text-muted-foreground text-xs">
-        Allure réelle de l&apos;athlète : {realPacePreview(bloc, performances)}
+        Allure réelle de l&apos;athlète : {realPacePreview(bloc, performances, zoneOverrides)}
       </p>
     </div>
   );

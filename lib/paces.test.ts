@@ -6,9 +6,12 @@ import {
   formatDurationHMS,
   formatPaceSecondsPerKm,
   getAthletePaceZone,
+  resolveHeartRateZones,
+  resolvePaceZones,
   riegelEquivalentSeconds,
   selectBasePerformance,
   type PerformanceReference,
+  type ZoneManualOverrides,
 } from "./paces";
 
 describe("riegelEquivalentSeconds", () => {
@@ -104,6 +107,89 @@ describe("getAthletePaceZone", () => {
       { distance: "10k", tempsSecondes: 2400, datePerf: "2026-01-01", type: "reel" },
     ]);
     expect(result.available).toBe(true);
+  });
+
+  it("returns a manual override even with no reference performance", () => {
+    const overrides: ZoneManualOverrides = {
+      z2_endurance: { paceMinSecondsPerKm: 300, paceMaxSecondsPerKm: 330, fcMinBpm: null, fcMaxBpm: null },
+    };
+    const result = getAthletePaceZone("z2_endurance", [], overrides);
+    expect(result).toEqual({
+      available: true,
+      zone: "z2_endurance",
+      range: { minSecondsPerKm: 300, maxSecondsPerKm: 330 },
+    });
+  });
+
+  it("prefers a manual override over the computed range", () => {
+    const overrides: ZoneManualOverrides = {
+      z4_seuil: { paceMinSecondsPerKm: 200, paceMaxSecondsPerKm: 210, fcMinBpm: null, fcMaxBpm: null },
+    };
+    const result = getAthletePaceZone(
+      "z4_seuil",
+      [{ distance: "10k", tempsSecondes: 2400, datePerf: "2026-01-01", type: "reel" }],
+      overrides
+    );
+    expect(result).toEqual({
+      available: true,
+      zone: "z4_seuil",
+      range: { minSecondsPerKm: 200, maxSecondsPerKm: 210 },
+    });
+  });
+});
+
+describe("resolvePaceZones", () => {
+  it("marks every zone as computed (not manual) when there is no override", () => {
+    const zones = resolvePaceZones([
+      { distance: "10k", tempsSecondes: 2400, datePerf: "2026-01-01", type: "reel" },
+    ]);
+    expect(zones.z4_seuil.isManual).toBe(false);
+    expect(zones.z4_seuil.range).not.toBeNull();
+  });
+
+  it("returns a null range for every zone when neither override nor performance exists", () => {
+    const zones = resolvePaceZones([]);
+    expect(zones.z2_endurance).toEqual({ range: null, isManual: false });
+  });
+
+  it("only marks the overridden zone as manual, leaving the rest computed", () => {
+    const overrides: ZoneManualOverrides = {
+      z1_recup: { paceMinSecondsPerKm: 400, paceMaxSecondsPerKm: 420, fcMinBpm: null, fcMaxBpm: null },
+    };
+    const zones = resolvePaceZones(
+      [{ distance: "10k", tempsSecondes: 2400, datePerf: "2026-01-01", type: "reel" }],
+      overrides
+    );
+    expect(zones.z1_recup).toEqual({
+      range: { minSecondsPerKm: 400, maxSecondsPerKm: 420 },
+      isManual: true,
+    });
+    expect(zones.z4_seuil.isManual).toBe(false);
+  });
+});
+
+describe("resolveHeartRateZones", () => {
+  it("returns a null range for every zone when there is no FC max and no override", () => {
+    const zones = resolveHeartRateZones(null);
+    expect(zones.z2_endurance).toEqual({ range: null, isManual: false });
+  });
+
+  it("prefers a manual override over the %FCmax computation", () => {
+    const overrides: ZoneManualOverrides = {
+      z5_vma: { paceMinSecondsPerKm: null, paceMaxSecondsPerKm: null, fcMinBpm: 170, fcMaxBpm: 180 },
+    };
+    const zones = resolveHeartRateZones(190, overrides);
+    expect(zones.z5_vma).toEqual({ range: { minBpm: 170, maxBpm: 180 }, isManual: true });
+    expect(zones.z2_endurance.isManual).toBe(false);
+  });
+
+  it("ignores a one-sided FC override (requires both bounds) and falls back to computed", () => {
+    const overrides: ZoneManualOverrides = {
+      z5_vma: { paceMinSecondsPerKm: null, paceMaxSecondsPerKm: null, fcMinBpm: 170, fcMaxBpm: null },
+    };
+    const zones = resolveHeartRateZones(190, overrides);
+    expect(zones.z5_vma.isManual).toBe(false);
+    expect(zones.z5_vma.range).toEqual({ minBpm: 175, maxBpm: 184 });
   });
 });
 

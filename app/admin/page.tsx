@@ -2,8 +2,8 @@ import Link from "next/link";
 import { endOfWeek, format, startOfWeek } from "date-fns";
 import { createClient } from "@/utils/supabase/server";
 import { computeSeanceVolume } from "@/lib/volume";
-import { toBlocSeanceInput, toPerformanceReference } from "@/lib/mappers";
-import type { PerformanceReference } from "@/lib/paces";
+import { toBlocSeanceInput, toPerformanceReference, toZoneManualOverrides } from "@/lib/mappers";
+import type { PerformanceReference, ZoneManualOverrides } from "@/lib/paces";
 import { nowInParis } from "@/lib/date";
 import {
   Table,
@@ -27,6 +27,7 @@ export default async function AdminAthleteListPage() {
   const [
     { data: athletes },
     { data: performances },
+    { data: zoneManuelles },
     { data: competitions },
     { data: weekSeances },
     { data: retours },
@@ -35,6 +36,9 @@ export default async function AdminAthleteListPage() {
     supabase
       .from("performance_reference")
       .select("athlete_id, distance, temps_secondes, date_perf, type"),
+    supabase
+      .from("zone_manuelle")
+      .select("athlete_id, zone, allure_min_secondes_par_km, allure_max_secondes_par_km, fc_min_bpm, fc_max_bpm"),
     supabase
       .from("competition")
       .select("athlete_id, nom, date, priorite")
@@ -63,6 +67,18 @@ export default async function AdminAthleteListPage() {
     const list = performancesByAthlete.get(row.athlete_id) ?? [];
     list.push(toPerformanceReference(row));
     performancesByAthlete.set(row.athlete_id, list);
+  }
+
+  type ZoneManuelleWithAthlete = NonNullable<typeof zoneManuelles>[number];
+  const zoneManuellesByAthlete = new Map<string, ZoneManuelleWithAthlete[]>();
+  for (const row of zoneManuelles ?? []) {
+    const list = zoneManuellesByAthlete.get(row.athlete_id) ?? [];
+    list.push(row);
+    zoneManuellesByAthlete.set(row.athlete_id, list);
+  }
+  const zoneOverridesByAthlete = new Map<string, ZoneManualOverrides>();
+  for (const [athleteId, rows] of zoneManuellesByAthlete) {
+    zoneOverridesByAthlete.set(athleteId, toZoneManualOverrides(rows));
   }
 
   const nextCompetitionByAthlete = new Map<
@@ -94,10 +110,11 @@ export default async function AdminAthleteListPage() {
   }
 
   function weeklyVolume(athleteId: string) {
+    const overrides = zoneOverridesByAthlete.get(athleteId) ?? {};
     const ids = weekSeanceIdsByAthlete.get(athleteId);
-    if (!ids) return computeSeanceVolume([], []);
+    if (!ids) return computeSeanceVolume([], [], overrides);
     const blocs = (weekBlocs ?? []).filter((b) => ids.has(b.seance_id)).map(toBlocSeanceInput);
-    return computeSeanceVolume(blocs, performancesByAthlete.get(athleteId) ?? []);
+    return computeSeanceVolume(blocs, performancesByAthlete.get(athleteId) ?? [], overrides);
   }
 
   return (

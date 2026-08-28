@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { getCurrentAthlete } from "./_lib/current-athlete";
 import { nowInParis } from "@/lib/date";
-import { toBlocSeanceInput, toPerformanceReference } from "@/lib/mappers";
+import { toBlocSeanceInput, toPerformanceReference, toZoneManualOverrides } from "@/lib/mappers";
 import { computeSeanceVolume } from "@/lib/volume";
 import { SEANCE_TYPE_LABELS } from "@/lib/labels";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +27,7 @@ export default async function MonPlanHomePage() {
     { data: competitionA },
     { data: weekSeances },
     { data: performanceRows },
+    { data: zoneManuelleRows },
   ] = await Promise.all([
     supabase
       .from("seance")
@@ -62,9 +63,14 @@ export default async function MonPlanHomePage() {
       .from("performance_reference")
       .select("distance, temps_secondes, date_perf, type")
       .eq("athlete_id", athlete.id),
+    supabase
+      .from("zone_manuelle")
+      .select("zone, allure_min_secondes_par_km, allure_max_secondes_par_km, fc_min_bpm, fc_max_bpm")
+      .eq("athlete_id", athlete.id),
   ]);
 
   const performances = (performanceRows ?? []).map(toPerformanceReference);
+  const zoneOverrides = toZoneManualOverrides(zoneManuelleRows ?? []);
   const isToday = (todaySeances ?? []).length > 0;
   const featuredSeance = isToday ? todaySeances![0] : (nextSeanceRows ?? [])[0] ?? null;
 
@@ -74,7 +80,7 @@ export default async function MonPlanHomePage() {
       .from("bloc_seance")
       .select("*")
       .eq("seance_id", featuredSeance.id);
-    featuredVolume = computeSeanceVolume((blocs ?? []).map(toBlocSeanceInput), performances);
+    featuredVolume = computeSeanceVolume((blocs ?? []).map(toBlocSeanceInput), performances, zoneOverrides);
   }
 
   const weekSeanceIds = (weekSeances ?? []).map((s) => s.id);
@@ -82,7 +88,7 @@ export default async function MonPlanHomePage() {
     weekSeanceIds.length > 0
       ? await supabase.from("bloc_seance").select("*").in("seance_id", weekSeanceIds)
       : { data: [] };
-  const weekVolume = computeSeanceVolume((weekBlocs ?? []).map(toBlocSeanceInput), performances);
+  const weekVolume = computeSeanceVolume((weekBlocs ?? []).map(toBlocSeanceInput), performances, zoneOverrides);
 
   const daysToCompetition = competitionA
     ? differenceInCalendarDays(new Date(competitionA.date), today)

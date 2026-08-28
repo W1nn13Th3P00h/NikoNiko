@@ -8,13 +8,12 @@ import { fr } from "date-fns/locale";
 import { computeSeanceVolume } from "@/lib/volume";
 import { toBlocSeanceInput } from "@/lib/mappers";
 import {
-  computePaceZones,
-  computeThresholdPaceSecondsPerKm,
   formatPaceSecondsPerKm,
-  selectBasePerformance,
+  resolvePaceZones,
   ZONE_SHORT_LABELS,
   type PerformanceReference,
   type ZoneAllure,
+  type ZoneManualOverrides,
 } from "@/lib/paces";
 import { SEANCE_TYPE_LABELS } from "@/lib/labels";
 import { ZONE_COLORS, seanceTypeColor } from "@/lib/zone-colors";
@@ -114,6 +113,7 @@ export function CalendarView({
   competitions,
   nextCompetition,
   performances,
+  zoneOverrides = {},
   view,
   density,
   referenceDate,
@@ -129,6 +129,7 @@ export function CalendarView({
   competitions: CompetitionRow[];
   nextCompetition: { nom: string; date: string; priorite: string } | null;
   performances: PerformanceReference[];
+  zoneOverrides?: ZoneManualOverrides;
   view: "mois" | "semaine";
   density: "detaille" | "compact";
   referenceDate: string;
@@ -161,7 +162,7 @@ export function CalendarView({
     const weekSeances = seances.filter((s) => s.date_prevue && daySet.has(s.date_prevue));
     const weekSeanceIds = new Set(weekSeances.map((s) => s.id));
     const weekBlocs = blocs.filter((b) => weekSeanceIds.has(b.seance_id)).map(toBlocSeanceInput);
-    const volume = computeSeanceVolume(weekBlocs, performances);
+    const volume = computeSeanceVolume(weekBlocs, performances, zoneOverrides);
 
     let doneKm = 0;
     let doneCount = 0;
@@ -202,9 +203,8 @@ export function CalendarView({
     if (error) window.alert(`Échec de la suppression : ${error}`);
   }
 
-  const basePerformance = selectBasePerformance(performances);
-  const threshold = basePerformance ? computeThresholdPaceSecondsPerKm(basePerformance) : null;
-  const paceZones = threshold ? computePaceZones(threshold) : null;
+  const paceZones = resolvePaceZones(performances, zoneOverrides);
+  const hasAnyZone = ZONE_ORDER.some((zone) => paceZones[zone].range !== null);
 
   return (
     <div className="flex gap-8">
@@ -228,11 +228,12 @@ export function CalendarView({
           <p className="mb-1 text-xs font-semibold tracking-[0.1em] text-muted-foreground uppercase">
             Zones de {athlete.prenom}
           </p>
-          {!paceZones ? (
+          {!hasAnyZone ? (
             <p className="text-xs text-muted-foreground">Aucune performance de référence.</p>
           ) : (
             ZONE_ORDER.map((zone) => {
               const pace = paceZones[zone];
+              if (!pace.range) return null;
               return (
                 <div key={zone} className="flex items-center gap-2">
                   <span
@@ -241,9 +242,10 @@ export function CalendarView({
                   />
                   <span className="font-mono text-[11px] text-[#3D4B50]">
                     {ZONE_SHORT_LABELS[zone]}{" "}
-                    {pace.minSecondsPerKm === null
-                      ? `< ${formatPaceSecondsPerKm(pace.maxSecondsPerKm)}`
-                      : `${formatPaceSecondsPerKm(pace.minSecondsPerKm)}–${formatPaceSecondsPerKm(pace.maxSecondsPerKm)}`}
+                    {pace.range.minSecondsPerKm === null
+                      ? `< ${formatPaceSecondsPerKm(pace.range.maxSecondsPerKm)}`
+                      : `${formatPaceSecondsPerKm(pace.range.minSecondsPerKm)}–${formatPaceSecondsPerKm(pace.range.maxSecondsPerKm)}`}
+                    {pace.isManual && " (manuel)"}
                   </span>
                 </div>
               );
@@ -384,7 +386,7 @@ export function CalendarView({
                         <div className="flex flex-1 flex-col gap-1.5">
                           {daySeances.map((s) => {
                             const seanceBlocs = (blocsBySeanceId.get(s.id) ?? []).map(toBlocSeanceInput);
-                            const volumeSeance = computeSeanceVolume(seanceBlocs, performances);
+                            const volumeSeance = computeSeanceVolume(seanceBlocs, performances, zoneOverrides);
                             const retour = retourBySeanceId.get(s.id);
 
                             return (

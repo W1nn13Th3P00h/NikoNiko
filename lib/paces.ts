@@ -35,6 +35,31 @@ export type PaceZoneResult =
   | { available: true; zone: ZoneAllure; range: PaceRange }
   | { available: false; zone: ZoneAllure };
 
+/**
+ * Coach-entered replacement for one zone's computed bounds — for athletes
+ * with no usable reference performance, or too novice for the Riegel
+ * estimate to mean anything. Pace and FC bounds are independent: a coach
+ * can override just one side of a zone and leave the other computed.
+ */
+export interface ZoneManualOverride {
+  paceMinSecondsPerKm: number | null;
+  paceMaxSecondsPerKm: number | null;
+  fcMinBpm: number | null;
+  fcMaxBpm: number | null;
+}
+
+export type ZoneManualOverrides = Partial<Record<ZoneAllure, ZoneManualOverride>>;
+
+export interface ResolvedPaceZone {
+  range: PaceRange | null;
+  isManual: boolean;
+}
+
+export interface ResolvedHeartRateZone {
+  range: HeartRateRange | null;
+  isManual: boolean;
+}
+
 // --- Config: adjust freely, the logic below never hardcodes a number. ---
 
 export const DISTANCE_METRES: Record<DistanceRef, number> = {
@@ -181,21 +206,76 @@ export function computeHeartRateZones(fcMax: number): Record<ZoneAllure, HeartRa
 }
 
 /**
+ * Resolves every zone's pace range: a manual override where the coach set
+ * one (paceMaxSecondsPerKm present), the Riegel-computed range otherwise,
+ * or null when neither is available.
+ */
+export function resolvePaceZones(
+  performances: PerformanceReference[],
+  overrides: ZoneManualOverrides = {}
+): Record<ZoneAllure, ResolvedPaceZone> {
+  const base = selectBasePerformance(performances);
+  const computed = base ? computePaceZones(computeThresholdPaceSecondsPerKm(base)) : null;
+
+  const zones = {} as Record<ZoneAllure, ResolvedPaceZone>;
+  for (const zone of Object.keys(PACE_ZONE_COEFFICIENTS) as ZoneAllure[]) {
+    const override = overrides[zone];
+    if (override && override.paceMaxSecondsPerKm != null) {
+      zones[zone] = {
+        range: {
+          minSecondsPerKm: override.paceMinSecondsPerKm,
+          maxSecondsPerKm: override.paceMaxSecondsPerKm,
+        },
+        isManual: true,
+      };
+    } else {
+      zones[zone] = { range: computed?.[zone] ?? null, isManual: false };
+    }
+  }
+  return zones;
+}
+
+/**
+ * Resolves every zone's heart-rate range: a manual override where the coach
+ * set one (both bounds present), the computed %FCmax range otherwise, or
+ * null when neither is available.
+ */
+export function resolveHeartRateZones(
+  fcMax: number | null,
+  overrides: ZoneManualOverrides = {}
+): Record<ZoneAllure, ResolvedHeartRateZone> {
+  const computed = fcMax ? computeHeartRateZones(fcMax) : null;
+
+  const zones = {} as Record<ZoneAllure, ResolvedHeartRateZone>;
+  for (const zone of Object.keys(FC_ZONE_COEFFICIENTS) as ZoneAllure[]) {
+    const override = overrides[zone];
+    if (override && override.fcMinBpm != null && override.fcMaxBpm != null) {
+      zones[zone] = {
+        range: { minBpm: override.fcMinBpm, maxBpm: override.fcMaxBpm },
+        isManual: true,
+      };
+    } else {
+      zones[zone] = { range: computed?.[zone] ?? null, isManual: false };
+    }
+  }
+  return zones;
+}
+
+/**
  * Resolves one athlete's real pace range for a given zone. Returns
- * `available: false` (never throws) when the athlete has no usable
- * reference performance, so callers can fall back to displaying the zone
- * name with a prompt to add one instead of breaking the page.
+ * `available: false` (never throws) when neither a manual override nor a
+ * usable reference performance exists, so callers can fall back to
+ * displaying the zone name with a prompt to add one instead of breaking
+ * the page.
  */
 export function getAthletePaceZone(
   zone: ZoneAllure,
-  performances: PerformanceReference[]
+  performances: PerformanceReference[],
+  overrides: ZoneManualOverrides = {}
 ): PaceZoneResult {
-  const base = selectBasePerformance(performances);
-  if (!base) return { available: false, zone };
-
-  const threshold = computeThresholdPaceSecondsPerKm(base);
-  const zones = computePaceZones(threshold);
-  return { available: true, zone, range: zones[zone] };
+  const resolved = resolvePaceZones(performances, overrides)[zone];
+  if (!resolved.range) return { available: false, zone };
+  return { available: true, zone, range: resolved.range };
 }
 
 export function formatPaceSecondsPerKm(secondsPerKm: number): string {

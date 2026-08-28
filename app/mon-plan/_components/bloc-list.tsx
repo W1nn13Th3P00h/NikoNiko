@@ -6,6 +6,7 @@ import {
   formatPaceSecondsPerKm,
   getAthletePaceZone,
   type PerformanceReference,
+  type ZoneManualOverrides,
 } from "@/lib/paces";
 import { ZONE_COLORS } from "@/lib/zone-colors";
 
@@ -21,7 +22,11 @@ function formatEffort(bloc: BlocDisplayItem): string {
   return "Libre";
 }
 
-function formatCible(bloc: BlocDisplayItem, performances: PerformanceReference[]): string {
+function formatCible(
+  bloc: BlocDisplayItem,
+  performances: PerformanceReference[],
+  overrides: ZoneManualOverrides
+): string {
   if (bloc.cibleType === "libre") return "";
   if (bloc.cibleType === "rpe") return bloc.cibleRpe ? `RPE ${bloc.cibleRpe}` : "";
   if (bloc.cibleType === "allure_absolue") {
@@ -30,7 +35,7 @@ function formatCible(bloc: BlocDisplayItem, performances: PerformanceReference[]
       : "";
   }
   if (!bloc.cibleZone) return "";
-  const result = getAthletePaceZone(bloc.cibleZone, performances);
+  const result = getAthletePaceZone(bloc.cibleZone, performances, overrides);
   if (!result.available) return "pas de référence";
   const { minSecondsPerKm, maxSecondsPerKm } = result.range;
   return minSecondsPerKm === null
@@ -41,9 +46,11 @@ function formatCible(bloc: BlocDisplayItem, performances: PerformanceReference[]
 function BlocRowView({
   bloc,
   performances,
+  zoneOverrides,
 }: {
   bloc: BlocDisplayItem;
   performances: PerformanceReference[];
+  zoneOverrides: ZoneManualOverrides;
 }) {
   const bg = bloc.cibleZone ? ZONE_COLORS[bloc.cibleZone] : "var(--muted)";
   const label = `${BLOC_ROLE_LABELS[bloc.role]}${
@@ -64,7 +71,7 @@ function BlocRowView({
         {bloc.role === "corps" ? formatEffort(bloc) : label}
       </span>
       <span className="font-mono text-sm font-medium tabular-nums">
-        {formatCible(bloc, performances)}
+        {formatCible(bloc, performances, zoneOverrides)}
       </span>
     </div>
   );
@@ -73,9 +80,11 @@ function BlocRowView({
 export function BlocList({
   blocs,
   performances,
+  zoneOverrides = {},
 }: {
   blocs: BlocDisplayItem[];
   performances: PerformanceReference[];
+  zoneOverrides?: ZoneManualOverrides;
 }) {
   const topLevel = blocs.filter((b) => b.parentBlocId === null);
   const childrenOf = (id: string) => blocs.filter((b) => b.parentBlocId === id);
@@ -87,7 +96,7 @@ export function BlocList({
         if (children.length === 0) {
           return (
             <div key={bloc.id}>
-              <BlocRowView bloc={bloc} performances={performances} />
+              <BlocRowView bloc={bloc} performances={performances} zoneOverrides={zoneOverrides} />
               {bloc.commentaire && <p className="mt-1 text-sm">{bloc.commentaire}</p>}
             </div>
           );
@@ -99,7 +108,7 @@ export function BlocList({
             </p>
             {children.map((child) => (
               <div key={child.id}>
-                <BlocRowView bloc={child} performances={performances} />
+                <BlocRowView bloc={child} performances={performances} zoneOverrides={zoneOverrides} />
                 {child.commentaire && <p className="mt-1 text-sm">{child.commentaire}</p>}
               </div>
             ))}

@@ -6,6 +6,7 @@
 import {
   type PerformanceReference,
   type ZoneAllure,
+  type ZoneManualOverrides,
   getAthletePaceZone,
 } from "./paces";
 
@@ -45,14 +46,15 @@ interface SubtreeVolume {
 
 function resolvePaceSecondsPerKm(
   bloc: BlocSeanceInput,
-  performances: PerformanceReference[]
+  performances: PerformanceReference[],
+  overrides: ZoneManualOverrides
 ): { paceSecondsPerKm: number | null; missingReference: boolean } {
   if (bloc.cibleType === "allure_absolue" && bloc.cibleAllureSecondesParKm !== null) {
     return { paceSecondsPerKm: bloc.cibleAllureSecondesParKm, missingReference: false };
   }
 
   if ((bloc.cibleType === "zone_allure" || bloc.cibleType === "zone_fc") && bloc.cibleZone) {
-    const result = getAthletePaceZone(bloc.cibleZone, performances);
+    const result = getAthletePaceZone(bloc.cibleZone, performances, overrides);
     if (!result.available) {
       return { paceSecondsPerKm: null, missingReference: true };
     }
@@ -67,9 +69,10 @@ function resolvePaceSecondsPerKm(
 
 export function computeBlocOwnVolume(
   bloc: BlocSeanceInput,
-  performances: PerformanceReference[]
+  performances: PerformanceReference[],
+  overrides: ZoneManualOverrides = {}
 ): SubtreeVolume & { missingReference: boolean } {
-  const { paceSecondsPerKm, missingReference } = resolvePaceSecondsPerKm(bloc, performances);
+  const { paceSecondsPerKm, missingReference } = resolvePaceSecondsPerKm(bloc, performances, overrides);
 
   if (bloc.modeDuree === "distance" && bloc.distanceMetres !== null) {
     return {
@@ -97,7 +100,8 @@ export function computeBlocOwnVolume(
 
 export function computeSeanceVolume(
   blocs: BlocSeanceInput[],
-  performances: PerformanceReference[]
+  performances: PerformanceReference[],
+  overrides: ZoneManualOverrides = {}
 ): VolumeSeance {
   const childrenByParent = new Map<string, BlocSeanceInput[]>();
   for (const bloc of blocs) {
@@ -110,7 +114,7 @@ export function computeSeanceVolume(
   let missingReference = false;
 
   function subtreeVolume(bloc: BlocSeanceInput): SubtreeVolume {
-    const own = computeBlocOwnVolume(bloc, performances);
+    const own = computeBlocOwnVolume(bloc, performances, overrides);
     if (own.missingReference) missingReference = true;
 
     const children = childrenByParent.get(bloc.id) ?? [];

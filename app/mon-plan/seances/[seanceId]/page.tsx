@@ -6,7 +6,12 @@ import { createClient } from "@/utils/supabase/server";
 import { getCurrentAthlete } from "@/app/mon-plan/_lib/current-athlete";
 import { BlocList } from "@/app/mon-plan/_components/bloc-list";
 import { ProfileBar } from "@/components/profile-bar";
-import { toBlocDisplayItem, toBlocSeanceInput, toPerformanceReference } from "@/lib/mappers";
+import {
+  toBlocDisplayItem,
+  toBlocSeanceInput,
+  toPerformanceReference,
+  toZoneManualOverrides,
+} from "@/lib/mappers";
 import { computeSeanceVolume } from "@/lib/volume";
 import { computeProfileSegments } from "@/lib/profile-bar";
 import { computeCharge } from "@/lib/charge";
@@ -24,29 +29,39 @@ export default async function SeanceDetailPage({
   const { seanceId } = await params;
   const supabase = await createClient();
 
-  const [{ data: seance }, { data: blocRows }, { data: performanceRows }, { data: retour }] =
-    await Promise.all([
-      supabase
-        .from("seance")
-        .select("*")
-        .eq("id", seanceId)
-        .eq("athlete_id", athlete.id)
-        .eq("est_modele", false)
-        .single(),
-      supabase.from("bloc_seance").select("*").eq("seance_id", seanceId).order("ordre"),
-      supabase
-        .from("performance_reference")
-        .select("distance, temps_secondes, date_perf, type")
-        .eq("athlete_id", athlete.id),
-      supabase.from("retour_seance").select("*").eq("seance_id", seanceId).maybeSingle(),
-    ]);
+  const [
+    { data: seance },
+    { data: blocRows },
+    { data: performanceRows },
+    { data: zoneManuelleRows },
+    { data: retour },
+  ] = await Promise.all([
+    supabase
+      .from("seance")
+      .select("*")
+      .eq("id", seanceId)
+      .eq("athlete_id", athlete.id)
+      .eq("est_modele", false)
+      .single(),
+    supabase.from("bloc_seance").select("*").eq("seance_id", seanceId).order("ordre"),
+    supabase
+      .from("performance_reference")
+      .select("distance, temps_secondes, date_perf, type")
+      .eq("athlete_id", athlete.id),
+    supabase
+      .from("zone_manuelle")
+      .select("zone, allure_min_secondes_par_km, allure_max_secondes_par_km, fc_min_bpm, fc_max_bpm")
+      .eq("athlete_id", athlete.id),
+    supabase.from("retour_seance").select("*").eq("seance_id", seanceId).maybeSingle(),
+  ]);
 
   if (!seance) notFound();
 
   const performances = (performanceRows ?? []).map(toPerformanceReference);
+  const zoneOverrides = toZoneManualOverrides(zoneManuelleRows ?? []);
   const blocInputs = (blocRows ?? []).map(toBlocSeanceInput);
-  const volume = computeSeanceVolume(blocInputs, performances);
-  const segments = computeProfileSegments(blocInputs, performances);
+  const volume = computeSeanceVolume(blocInputs, performances, zoneOverrides);
+  const segments = computeProfileSegments(blocInputs, performances, zoneOverrides);
   const charge = retour?.rpe ? computeCharge(volume.dureeMinutes, retour.rpe) : null;
 
   const todayStr = format(nowInParis(), "yyyy-MM-dd");
@@ -77,7 +92,11 @@ export default async function SeanceDetailPage({
 
       <ProfileBar segments={segments} />
 
-      <BlocList blocs={(blocRows ?? []).map(toBlocDisplayItem)} performances={performances} />
+      <BlocList
+        blocs={(blocRows ?? []).map(toBlocDisplayItem)}
+        performances={performances}
+        zoneOverrides={zoneOverrides}
+      />
 
       {!volume.estimationComplete && (
         <p className="text-muted-foreground text-xs">

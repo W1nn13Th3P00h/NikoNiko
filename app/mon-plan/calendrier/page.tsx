@@ -6,7 +6,7 @@ import { createClient } from "@/utils/supabase/server";
 import { getCurrentAthlete } from "@/app/mon-plan/_lib/current-athlete";
 import { getMonthGridWeeks, getWeekGridDays } from "@/lib/calendar-grid";
 import { nowInParis } from "@/lib/date";
-import { toBlocSeanceInput, toPerformanceReference } from "@/lib/mappers";
+import { toBlocSeanceInput, toPerformanceReference, toZoneManualOverrides } from "@/lib/mappers";
 import { computeSeanceVolume } from "@/lib/volume";
 import { SEANCE_TYPE_LABELS } from "@/lib/labels";
 
@@ -28,7 +28,7 @@ export default async function AthleteCalendarPage({
   const gridStart = format(monthWeeks[0][0], "yyyy-MM-dd");
   const gridEnd = format(monthWeeks[monthWeeks.length - 1][6], "yyyy-MM-dd");
 
-  const [{ data: seances }, { data: performanceRows }] = await Promise.all([
+  const [{ data: seances }, { data: performanceRows }, { data: zoneManuelleRows }] = await Promise.all([
     supabase
       .from("seance")
       .select("id, titre, type, date_prevue")
@@ -40,6 +40,10 @@ export default async function AthleteCalendarPage({
     supabase
       .from("performance_reference")
       .select("distance, temps_secondes, date_perf, type")
+      .eq("athlete_id", athlete.id),
+    supabase
+      .from("zone_manuelle")
+      .select("zone, allure_min_secondes_par_km, allure_max_secondes_par_km, fc_min_bpm, fc_max_bpm")
       .eq("athlete_id", athlete.id),
   ]);
 
@@ -54,6 +58,7 @@ export default async function AthleteCalendarPage({
   ]);
 
   const performances = (performanceRows ?? []).map(toPerformanceReference);
+  const zoneOverrides = toZoneManualOverrides(zoneManuelleRows ?? []);
   const retourBySeanceId = new Map((retours ?? []).map((r) => [r.seance_id, r.statut]));
   const blocsBySeanceId = new Map<string, typeof blocs>();
   for (const b of blocs ?? []) {
@@ -117,7 +122,7 @@ export default async function AthleteCalendarPage({
                 <ul className="mt-1 flex flex-col gap-2">
                   {daySeances.map((s) => {
                     const seanceBlocs = (blocsBySeanceId.get(s.id) ?? []).map(toBlocSeanceInput);
-                    const volume = computeSeanceVolume(seanceBlocs, performances);
+                    const volume = computeSeanceVolume(seanceBlocs, performances, zoneOverrides);
                     const statut = retourBySeanceId.get(s.id);
                     return (
                       <li key={s.id}>
