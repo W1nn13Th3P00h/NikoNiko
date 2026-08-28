@@ -12,7 +12,7 @@ export default async function SeanceEditorPage({
   const { athleteId, seanceId } = await params;
   const supabase = await createClient();
 
-  const [{ data: athlete }, { data: seance }, { data: blocRows }, { data: performanceRows }] =
+  const [{ data: athlete }, { data: seance }, { data: blocRows }, { data: performanceRows }, { data: retour }] =
     await Promise.all([
       supabase.from("athlete").select("id, prenom, nom").eq("id", athleteId).single(),
       supabase
@@ -27,6 +27,7 @@ export default async function SeanceEditorPage({
         .from("performance_reference")
         .select("distance, temps_secondes, date_perf, type")
         .eq("athlete_id", athleteId),
+      supabase.from("retour_seance").select("*").eq("seance_id", seanceId).maybeSingle(),
     ]);
 
   if (!athlete || !seance) notFound();
@@ -39,6 +40,7 @@ export default async function SeanceEditorPage({
       performances={(performanceRows ?? []).map(toPerformanceReference)}
       redirectPath={`/admin/athletes/${athleteId}/calendrier`}
       allowSaveAsLibraryCopy
+      retour={retour ?? null}
     />
   );
 }

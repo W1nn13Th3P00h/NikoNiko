@@ -14,6 +14,7 @@ import {
   BLOC_ROLE_LABELS,
   CIBLE_TYPE_LABELS,
   MODE_DUREE_LABELS,
+  RETOUR_STATUT_LABELS,
   SEANCE_TYPE_LABELS,
 } from "@/lib/labels";
 import type { Database } from "@/lib/database.types";
@@ -44,6 +45,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type SeanceType = Database["public"]["Enums"]["seance_type"];
 type SeanceRow = Database["public"]["Tables"]["seance"]["Row"];
+type RetourRow = Database["public"]["Tables"]["retour_seance"]["Row"];
 
 const ZONE_OPTIONS: ZoneAllure[] = [
   "z1_recup",
@@ -77,6 +79,7 @@ export function SeanceEditor({
   performances,
   redirectPath,
   allowSaveAsLibraryCopy,
+  retour = null,
 }: {
   // Null when editing a library template directly (no athlete context, so
   // no real pace to preview against — realPacePreview falls back to
@@ -87,6 +90,9 @@ export function SeanceEditor({
   performances: PerformanceReference[];
   redirectPath: string;
   allowSaveAsLibraryCopy: boolean;
+  // The athlete's own retour on this séance, read-only here — only they
+  // can submit or edit it (see app/mon-plan/seances/[seanceId]).
+  retour?: RetourRow | null;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -184,6 +190,38 @@ export function SeanceEditor({
           {seance.date_prevue ? ` — ${seance.date_prevue}` : ""}
         </p>
       </div>
+
+      {athlete && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Retour de l&apos;athlète</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {retour ? (
+              <div className="flex flex-col gap-1">
+                <p className="font-medium">
+                  {RETOUR_STATUT_LABELS[retour.statut]}
+                  {retour.rpe !== null ? ` · RPE ${retour.rpe}` : ""}
+                </p>
+                {(retour.duree_reelle_secondes || retour.distance_reelle_metres) && (
+                  <p className="text-muted-foreground text-sm">
+                    {retour.duree_reelle_secondes ? `${Math.round(retour.duree_reelle_secondes / 60)} min` : ""}
+                    {retour.duree_reelle_secondes && retour.distance_reelle_metres ? " · " : ""}
+                    {retour.distance_reelle_metres
+                      ? `${(retour.distance_reelle_metres / 1000).toFixed(1)} km`
+                      : ""}
+                  </p>
+                )}
+                {retour.commentaire && <p className="text-sm">{retour.commentaire}</p>}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-sm">
+                Pas encore de retour de l&apos;athlète sur cette séance.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

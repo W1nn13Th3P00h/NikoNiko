@@ -8,7 +8,7 @@ import { fr } from "date-fns/locale";
 import { computeSeanceVolume } from "@/lib/volume";
 import { toBlocSeanceInput } from "@/lib/mappers";
 import type { PerformanceReference } from "@/lib/paces";
-import { SEANCE_TYPE_LABELS } from "@/lib/labels";
+import { RETOUR_STATUT_LABELS, SEANCE_TYPE_LABELS } from "@/lib/labels";
 import type { Database } from "@/lib/database.types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -212,6 +212,7 @@ export function CalendarView({
                           );
                           const volumeSeance = computeSeanceVolume(seanceBlocs, performances);
                           const retour = retourBySeanceId.get(s.id);
+                          const isPastDay = day < today;
                           return (
                             <div
                               key={s.id}
@@ -238,7 +239,18 @@ export function CalendarView({
                               <span className="text-muted-foreground">
                                 {SEANCE_TYPE_LABELS[s.type]} · {volumeSeance.distanceKm} km
                               </span>
-                              {retour && <RpeBadge rpe={retour.rpe} />}
+                              {retour ? (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-muted-foreground">
+                                    {RETOUR_STATUT_LABELS[retour.statut]}
+                                  </span>
+                                  <RpeBadge rpe={retour.rpe} />
+                                </div>
+                              ) : (
+                                isPastDay && (
+                                  <span className="text-muted-foreground italic">Pas de retour</span>
+                                )
+                              )}
                             </div>
                           );
                         })}
