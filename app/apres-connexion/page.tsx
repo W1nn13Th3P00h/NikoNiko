@@ -1,24 +1,17 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
+import { getCurrentUserId } from "@/utils/supabase/server";
+import { resolvePostLoginPath } from "@/lib/auth-destination";
 
-// No UI: routes the freshly authenticated user to the right space based on
-// profile.is_admin, so the magic link email doesn't need to know in advance
-// whether the requester is the coach or an athlete.
+// Fallback only: an authenticated user landing on /login or /auth/* gets
+// bounced here by proxy.ts. The two real login flows (magic link,
+// identifiant+code) redirect straight to /admin or /mon-plan themselves and
+// never route through this page — see lib/auth-destination.ts for why.
 export default async function PostLoginPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getCurrentUserId();
 
-  if (!user) {
+  if (!userId) {
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
-    .from("profile")
-    .select("is_admin")
-    .eq("id", user.id)
-    .single();
-
-  redirect(profile?.is_admin ? "/admin" : "/mon-plan");
+  redirect(await resolvePostLoginPath(userId));
 }
