@@ -92,7 +92,7 @@ async function copySeanceWithBlocs(
 
 // Creates a placeholder séance with no blocs yet; the coach immediately
 // lands in the block-by-block editor to define it (see
-// app/admin/athletes/[athleteId]/seances/[seanceId]).
+// app/admin/athletes/[identifiant]/seances/[seanceId]).
 export async function createBlankSeance(athleteId: string, date: string) {
   const supabase = await createClient();
   const { data } = await supabase
@@ -107,7 +107,7 @@ export async function createBlankSeance(athleteId: string, date: string) {
     .select("id")
     .single();
 
-  revalidatePath(`/admin/athletes/${athleteId}/calendrier`);
+  revalidatePath("/admin", "layout");
   return data?.id ?? null;
 }
 
@@ -118,19 +118,19 @@ export async function applyLibrarySeance(
 ) {
   const supabase = await createClient();
   await copySeanceWithBlocs(supabase, librarySeanceId, athleteId, date);
-  revalidatePath(`/admin/athletes/${athleteId}/calendrier`);
+  revalidatePath("/admin", "layout");
 }
 
-export async function moveSeanceDate(seanceId: string, athleteId: string, newDate: string) {
+export async function moveSeanceDate(seanceId: string, newDate: string) {
   const supabase = await createClient();
   await supabase.from("seance").update({ date_prevue: newDate }).eq("id", seanceId);
-  revalidatePath(`/admin/athletes/${athleteId}/calendrier`);
+  revalidatePath("/admin", "layout");
 }
 
-export async function deleteSeance(seanceId: string, athleteId: string) {
+export async function deleteSeance(seanceId: string) {
   const supabase = await createClient();
   await supabase.from("seance").delete().eq("id", seanceId);
-  revalidatePath(`/admin/athletes/${athleteId}/calendrier`);
+  revalidatePath("/admin", "layout");
 }
 
 export async function duplicateWeek(
@@ -157,6 +157,5 @@ export async function duplicateWeek(
     await copySeanceWithBlocs(supabase, s.id, targetAthleteId, targetDate);
   }
 
-  revalidatePath(`/admin/athletes/${targetAthleteId}/calendrier`);
-  revalidatePath(`/admin/athletes/${sourceAthleteId}/calendrier`);
+  revalidatePath("/admin", "layout");
 }

@@ -5,6 +5,7 @@ import type { Database } from "@/lib/database.types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LibraryFilters } from "./_components/library-filters";
+import { NewSeanceButton } from "./_components/new-seance-button";
 
 type SeanceType = Database["public"]["Enums"]["seance_type"];
 
@@ -44,13 +45,15 @@ export default async function BibliothequePage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Bibliothèque de séances</h1>
-        <p className="text-muted-foreground text-sm">
-          De nouvelles entrées arrivent depuis l&apos;éditeur de séance (case &quot;enregistrer
-          aussi dans la bibliothèque&quot;) — pas de formulaire de création séparé. Clique un
-          titre pour éditer une séance existante.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Bibliothèque de séances</h1>
+          <p className="text-muted-foreground text-sm">
+            Se remplit aussi depuis l&apos;éditeur de séance (case &quot;enregistrer aussi dans la
+            bibliothèque&quot;). Clique un titre pour éditer une séance existante.
+          </p>
+        </div>
+        <NewSeanceButton />
       </div>
 
       <LibraryFilters initialType={type ?? ""} initialQuery={q ?? ""} />

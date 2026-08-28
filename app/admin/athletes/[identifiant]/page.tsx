@@ -48,33 +48,33 @@ const ZONE_ORDER: ZoneAllure[] = [
 export default async function AthleteDetailPage({
   params,
 }: {
-  params: Promise<{ athleteId: string }>;
+  params: Promise<{ identifiant: string }>;
 }) {
-  const { athleteId } = await params;
+  const { identifiant } = await params;
   const supabase = await createClient();
 
-  const [
-    { data: athlete },
-    { data: performanceRows },
-    { data: competitions },
-    { data: note },
-  ] = await Promise.all([
-    supabase.from("athlete").select("*").eq("id", athleteId).single(),
+  const { data: athlete } = await supabase
+    .from("athlete")
+    .select("*")
+    .eq("identifiant", identifiant)
+    .single();
+
+  if (!athlete) notFound();
+
+  const [{ data: performanceRows }, { data: competitions }, { data: note }] = await Promise.all([
     supabase
       .from("performance_reference")
       .select("*")
-      .eq("athlete_id", athleteId)
+      .eq("athlete_id", athlete.id)
       .order("date_perf", { ascending: false }),
     supabase
       .from("competition")
       .select("*")
-      .eq("athlete_id", athleteId)
+      .eq("athlete_id", athlete.id)
       .gte("date", format(nowInParis(), "yyyy-MM-dd"))
       .order("date"),
-    supabase.from("athlete_note").select("contenu").eq("athlete_id", athleteId).maybeSingle(),
+    supabase.from("athlete_note").select("contenu").eq("athlete_id", athlete.id).maybeSingle(),
   ]);
-
-  if (!athlete) notFound();
 
   const performances = (performanceRows ?? []).map(toPerformanceReference);
   const basePerformance = selectBasePerformance(performances);
@@ -93,7 +93,7 @@ export default async function AthleteDetailPage({
           <p className="text-muted-foreground text-sm">{athlete.email}</p>
         </div>
         <Link
-          href={`/admin/athletes/${athlete.id}/calendrier`}
+          href={`/admin/athletes/${athlete.identifiant}/calendrier`}
           className="text-sm underline"
         >
           Voir le calendrier
@@ -250,7 +250,7 @@ export default async function AthleteDetailPage({
           <CardTitle>Notes (coach uniquement)</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={saveAthleteNote.bind(null, athleteId)} className="flex flex-col gap-3">
+          <form action={saveAthleteNote.bind(null, athlete.id)} className="flex flex-col gap-3">
             <Textarea name="contenu" defaultValue={note?.contenu ?? ""} rows={4} />
             <Button type="submit" className="self-start">
               Enregistrer

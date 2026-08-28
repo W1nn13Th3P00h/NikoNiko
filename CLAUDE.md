@@ -37,7 +37,7 @@ app/                    routes (App Router)
   actions/auth.ts        Server Action de déconnexion
   admin/                parcours coach, protégé
     page.tsx             liste des athlètes (volume semaine, dernier RPE, prochaine compét)
-    athletes/[athleteId]/ fiche athlète (zones calculées, perfs, compétitions, notes)
+    athletes/[identifiant]/ fiche athlète (zones calculées, perfs, compétitions, notes)
       calendrier/          vue mois/semaine, drag and drop, ajout (bibliothèque/custom), duplication de semaine
       seances/[seanceId]/  page fine : charge la séance de CET athlète, délègue à _components/seance-editor.tsx
     bibliotheque/          liste filtrable (type, recherche titre) des séances est_modele=true
@@ -86,6 +86,7 @@ supabase/migrations/     migrations SQL (schéma + RLS + seed)
 
 - Deux méthodes de connexion, au choix par athlète : magic link (email réel), ou identifiant + code défini par le coach. La seconde existe pour deux raisons : certains athlètes préfèrent ne pas gérer d'email pour ça, et elle contourne la limite Resend en mode test (voir README.md) tant qu'aucun domaine n'est vérifié.
   - L'identifiant + code s'appuie sur un compte Supabase Auth classique avec un email interne synthétique (`identifiant@athlete.appcoaching.internal`, jamais résolu ni envoyé) et un mot de passe = le code — pas un système d'auth parallèle.
+  - `athlete.identifiant` sert aussi de slug d'URL admin (`/admin/athletes/[identifiant]`, au lieu de l'UUID) — obligatoire et unique pour tout athlète, que le coach configure ou non un code de connexion dessus.
   - Créé/modifié via `auth.admin.createUser`/`updateUserById` (`utils/supabase/admin.ts`, clé service_role, jamais exposée au client, jamais importée hors des Server Actions qui en ont besoin).
   - Un athlete_id ne pointe que vers UN auth_user_id : configurer l'identifiant sur un athlète déjà lié à un email réel crée un nouveau compte et re-pointe le lien plutôt que d'écraser l'email réel en place (`setAthleteCredentials` vérifie si le compte lié est déjà un compte "interne" avant de décider update vs create).
 - RLS Postgres : un athlète ne voit que ses propres données, et ne peut écrire que dans `retour_seance` sur ses propres séances (occurrences, pas modèles).
@@ -103,9 +104,9 @@ Import Strava/Garmin, notifications, export FIT effectif, multi-coach, graphique
 - [x] Étape 1 — Modèle de données (migration SQL, RLS, seed appliqués au projet distant, types TS générés dans `lib/database.types.ts`)
 - [x] Étape 2 — Logique métier (`lib/paces.ts`, `lib/volume.ts`, 18 tests Vitest)
 - [x] Étape 3 — Authentification (magic link via `token_hash`/`verifyOtp`, protection des routes dans `proxy.ts`, SMTP Resend configuré côté Supabase) — vérifié de bout en bout : connexion coach → `/admin`
-- [x] Étape 4 — Admin : athlètes (liste `/admin`, fiche `/admin/athletes/[athleteId]` avec zones calculées en clair et notes coach éditables)
-- [x] Étape 5 — Admin : calendrier (`/admin/athletes/[athleteId]/calendrier`, vues mois/semaine, drag and drop, ajout bibliothèque/custom, duplication de semaine)
-- [x] Étape 6 — Éditeur de séance (`/admin/athletes/[athleteId]/seances/[seanceId]`), Bibliothèque (`/admin/bibliotheque`, filtre type + recherche titre — pas de filtre "tag" : ce champ n'existe pas dans le modèle de données malgré la mention dans le prompt initial), Retours (`/admin/retours`, chronologique, 100 derniers)
+- [x] Étape 4 — Admin : athlètes (liste `/admin`, fiche `/admin/athletes/[identifiant]` avec zones calculées en clair et notes coach éditables)
+- [x] Étape 5 — Admin : calendrier (`/admin/athletes/[identifiant]/calendrier`, vues mois/semaine, drag and drop, ajout bibliothèque/custom, duplication de semaine)
+- [x] Étape 6 — Éditeur de séance (`/admin/athletes/[identifiant]/seances/[seanceId]`), Bibliothèque (`/admin/bibliotheque`, filtre type + recherche titre — pas de filtre "tag" : ce champ n'existe pas dans le modèle de données malgré la mention dans le prompt initial), Retours (`/admin/retours`, chronologique, 100 derniers)
 - [x] Étape 7 — Athlète (`/mon-plan`)
 - [ ] Étape 8 — QA responsive + finalisation
 

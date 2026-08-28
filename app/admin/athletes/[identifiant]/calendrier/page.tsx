@@ -10,10 +10,10 @@ export default async function AthleteCalendarPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ athleteId: string }>;
+  params: Promise<{ identifiant: string }>;
   searchParams: Promise<{ vue?: string; date?: string }>;
 }) {
-  const { athleteId } = await params;
+  const { identifiant } = await params;
   const { vue, date } = await searchParams;
 
   const view = vue === "semaine" ? "semaine" : "mois";
@@ -27,28 +27,31 @@ export default async function AthleteCalendarPage({
 
   const supabase = await createClient();
 
-  const [
-    { data: athlete },
-    { data: allAthletes },
-    { data: librarySeances },
-    { data: gridSeances },
-    { data: performanceRows },
-  ] = await Promise.all([
-    supabase.from("athlete").select("id, prenom, nom").eq("id", athleteId).single(),
-    supabase.from("athlete").select("id, prenom, nom").eq("actif", true).order("nom"),
-    supabase.from("seance").select("id, titre, type").eq("est_modele", true).order("titre"),
-    supabase
-      .from("seance")
-      .select("id, titre, type, date_prevue, ordre_dans_journee")
-      .eq("athlete_id", athleteId)
-      .eq("est_modele", false)
-      .gte("date_prevue", gridStartStr)
-      .lte("date_prevue", gridEndStr)
-      .order("ordre_dans_journee"),
-    supabase.from("performance_reference").select("distance, temps_secondes, date_perf, type").eq("athlete_id", athleteId),
-  ]);
+  const { data: athlete } = await supabase
+    .from("athlete")
+    .select("id, prenom, nom, identifiant")
+    .eq("identifiant", identifiant)
+    .single();
 
   if (!athlete) notFound();
+
+  const [{ data: allAthletes }, { data: librarySeances }, { data: gridSeances }, { data: performanceRows }] =
+    await Promise.all([
+      supabase.from("athlete").select("id, prenom, nom").eq("actif", true).order("nom"),
+      supabase.from("seance").select("id, titre, type").eq("est_modele", true).order("titre"),
+      supabase
+        .from("seance")
+        .select("id, titre, type, date_prevue, ordre_dans_journee")
+        .eq("athlete_id", athlete.id)
+        .eq("est_modele", false)
+        .gte("date_prevue", gridStartStr)
+        .lte("date_prevue", gridEndStr)
+        .order("ordre_dans_journee"),
+      supabase
+        .from("performance_reference")
+        .select("distance, temps_secondes, date_perf, type")
+        .eq("athlete_id", athlete.id),
+    ]);
 
   const seanceIds = (gridSeances ?? []).map((s) => s.id);
   const [{ data: blocs }, { data: retours }] = await Promise.all([

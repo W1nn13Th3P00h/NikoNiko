@@ -6,10 +6,10 @@
 -- Athletes
 -- =========================================================================
 
-insert into athlete (id, prenom, nom, email, date_naissance, fc_max, fc_repos, actif) values
-  ('a1111111-1111-1111-1111-111111111111', 'Émilie', 'Rocher', 'emilie.rocher@example.com', '1994-03-12', 188, 58, true),
-  ('a2222222-2222-2222-2222-222222222222', 'Karim', 'Haddad', 'karim.haddad@example.com', '1989-07-25', 192, 50, true),
-  ('a3333333-3333-3333-3333-333333333333', 'Sophie', 'Lenoir', 'sophie.lenoir@example.com', '1991-11-02', 185, 46, true);
+insert into athlete (id, identifiant, prenom, nom, email, date_naissance, fc_max, fc_repos, actif) values
+  ('a1111111-1111-1111-1111-111111111111', 'emilie', 'Émilie', 'Rocher', 'emilie.rocher@example.com', '1994-03-12', 188, 58, true),
+  ('a2222222-2222-2222-2222-222222222222', 'karim', 'Karim', 'Haddad', 'karim.haddad@example.com', '1989-07-25', 192, 50, true),
+  ('a3333333-3333-3333-3333-333333333333', 'sophie', 'Sophie', 'Lenoir', 'sophie.lenoir@example.com', '1991-11-02', 185, 46, true);
 
 insert into athlete_note (athlete_id, contenu) values
   ('a1111111-1111-1111-1111-111111111111', 'Reprise après une pause de 6 mois, attention à la progressivité du volume.'),

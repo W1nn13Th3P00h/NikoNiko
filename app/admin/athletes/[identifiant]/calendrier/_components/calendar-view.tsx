@@ -58,6 +58,9 @@ interface AthleteRef {
   id: string;
   prenom: string;
   nom: string;
+  // Only present on the main `athlete` prop, not on `allAthletes` — used to
+  // build links back into this athlete's own routes.
+  identifiant?: string;
 }
 
 interface LibrarySeanceRef {
@@ -132,7 +135,7 @@ export function CalendarView({
   }
 
   async function handleDrop(seanceId: string, newDate: string) {
-    await moveSeanceDate(seanceId, athlete.id, newDate);
+    await moveSeanceDate(seanceId, newDate);
   }
 
   return (
@@ -222,14 +225,14 @@ export function CalendarView({
                             >
                               <div className="flex items-start justify-between gap-1">
                                 <Link
-                                  href={`/admin/athletes/${athlete.id}/seances/${s.id}`}
+                                  href={`/admin/athletes/${athlete.identifiant}/seances/${s.id}`}
                                   className="font-medium hover:underline"
                                 >
                                   {s.titre}
                                 </Link>
                                 <button
                                   type="button"
-                                  onClick={() => void deleteSeance(s.id, athlete.id)}
+                                  onClick={() => void deleteSeance(s.id)}
                                   className="text-muted-foreground opacity-0 group-hover:opacity-100"
                                   aria-label="Supprimer"
                                 >
@@ -283,6 +286,7 @@ export function CalendarView({
         date={addDialogDate}
         onOpenChange={(open) => !open && setAddDialogDate(null)}
         athleteId={athlete.id}
+        athleteIdentifiant={athlete.identifiant ?? ""}
         librarySeances={librarySeances}
         mode={addMode}
         onModeChange={setAddMode}
@@ -302,6 +306,7 @@ function AddSeanceDialog({
   date,
   onOpenChange,
   athleteId,
+  athleteIdentifiant,
   librarySeances,
   mode,
   onModeChange,
@@ -309,6 +314,7 @@ function AddSeanceDialog({
   date: string | null;
   onOpenChange: (open: boolean) => void;
   athleteId: string;
+  athleteIdentifiant: string;
   librarySeances: LibrarySeanceRef[];
   mode: "bibliotheque" | "custom";
   onModeChange: (mode: "bibliotheque" | "custom") => void;
@@ -382,7 +388,7 @@ function AddSeanceDialog({
                 if (!date) return;
                 const newSeanceId = await createBlankSeance(athleteId, date);
                 if (newSeanceId) {
-                  router.push(`/admin/athletes/${athleteId}/seances/${newSeanceId}`);
+                  router.push(`/admin/athletes/${athleteIdentifiant}/seances/${newSeanceId}`);
                 }
               }}
             >

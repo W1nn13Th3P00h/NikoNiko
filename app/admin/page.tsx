@@ -30,7 +30,7 @@ export default async function AdminAthleteListPage() {
     { data: weekSeances },
     { data: retours },
   ] = await Promise.all([
-    supabase.from("athlete").select("id, prenom, nom").eq("actif", true).order("nom"),
+    supabase.from("athlete").select("id, prenom, nom, identifiant").eq("actif", true).order("nom"),
     supabase
       .from("performance_reference")
       .select("athlete_id, distance, temps_secondes, date_perf, type"),
@@ -123,7 +123,7 @@ export default async function AdminAthleteListPage() {
               <TableRow key={athlete.id}>
                 <TableCell>
                   <Link
-                    href={`/admin/athletes/${athlete.id}`}
+                    href={`/admin/athletes/${athlete.identifiant}`}
                     className="font-medium hover:underline"
                   >
                     {athlete.prenom} {athlete.nom}
@@ -150,7 +150,7 @@ export default async function AdminAthleteListPage() {
                 </TableCell>
                 <TableCell>
                   <Link
-                    href={`/admin/athletes/${athlete.id}/calendrier`}
+                    href={`/admin/athletes/${athlete.identifiant}/calendrier`}
                     className="text-sm hover:underline"
                   >
                     Calendrier
