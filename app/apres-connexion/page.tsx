@@ -2,10 +2,10 @@ import { redirect } from "next/navigation";
 import { getCurrentUserId } from "@/utils/supabase/server";
 import { resolvePostLoginPath } from "@/lib/auth-destination";
 
-// Fallback only: an authenticated user landing on /login or /auth/* gets
-// bounced here by proxy.ts. The two real login flows (magic link,
-// identifiant+code) redirect straight to /admin or /mon-plan themselves and
-// never route through this page — see lib/auth-destination.ts for why.
+// Fallback only: an authenticated user landing on /login gets bounced here
+// by proxy.ts. The real login flow (app/login/actions.ts) redirects
+// straight to /admin or /mon-plan itself and never routes through this
+// page — see lib/auth-destination.ts for why.
 export default async function PostLoginPage() {
   const userId = await getCurrentUserId();
 

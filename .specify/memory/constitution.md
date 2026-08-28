@@ -71,11 +71,12 @@ par défaut dégrade l'expérience du cas d'usage principal.
 ## Stack & Architecture Constraints
 
 Next.js App Router, TypeScript strict, React Server Components par défaut,
-Server Actions pour toute mutation. Supabase pour Postgres, Auth (magic link
-et identifiant/code) et RLS. Tailwind CSS + shadcn/ui pour l'UI. date-fns
-pour les dates, fuseau Europe/Paris, semaines commençant le lundi — jamais de
-`new Date()` nu, toujours `lib/date.ts#nowInParis()`. Vitest pour les tests
-unitaires de logique métier (`lib/`). Déploiement cible : Vercel. Pas de
+Server Actions pour toute mutation. Supabase pour Postgres, Auth (identifiant
++ mot de passe, pour le coach comme pour les athlètes) et RLS. Tailwind CSS +
+shadcn/ui pour l'UI. date-fns pour les dates, fuseau Europe/Paris, semaines
+commençant le lundi — jamais de `new Date()` nu, toujours
+`lib/date.ts#nowInParis()`. Vitest pour les tests unitaires de logique
+métier (`lib/`). Déploiement cible : Netlify. Pas de
 state manager global tant que le besoin n'est pas prouvé par l'usage réel de
 l'application (cf. Principe I).
 
