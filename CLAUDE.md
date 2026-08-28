@@ -109,6 +109,7 @@ Import Strava/Garmin, notifications, export FIT effectif, multi-coach, graphique
 - [x] Étape 6 — Éditeur de séance (`/admin/athletes/[identifiant]/seances/[seanceId]`), Bibliothèque (`/admin/bibliotheque`, filtre type + recherche titre — pas de filtre "tag" : ce champ n'existe pas dans le modèle de données malgré la mention dans le prompt initial), Retours (`/admin/retours`, chronologique, 100 derniers)
 - [x] Étape 7 — Athlète (`/mon-plan`)
 - [x] Étape 8 — QA responsive + finalisation (page d'accueil, `error.tsx`/`not-found.tsx`/`robots.ts`, safe-area iOS sur la nav mobile, confirmations et retours d'erreur sur les actions destructrices ou fire-and-forget, états vides manquants, petites incohérences de fuseau horaire et d'accessibilité)
+(spec-kit `specs/001-qa-responsive-finalisation/`). Audit statique effectué (pas d'accès navigateur dans cette session) : 2 bugs réels corrigés (calendrier admin sans protection de débordement horizontal ; aperçu live de l'éditeur de séance en largeur fixe qui poussait l'éditeur hors écran sous ~1050px) + 1 amélioration mineure (filtres bibliothèque). Reste à faire : validation visuelle réelle dans un navigateur (T007, T015, T016, T019 de `tasks.md`) avant de cocher cette étape.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

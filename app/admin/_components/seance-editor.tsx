@@ -202,8 +202,8 @@ export function SeanceEditor({
         </p>
       </div>
 
-      <div className="flex items-start gap-8">
-        <div className="flex flex-1 flex-col gap-6">
+      <div className="flex flex-col items-start gap-8 lg:flex-row">
+        <div className="flex w-full flex-1 flex-col gap-6">
           {athlete && (
             <Card>
               <CardHeader>
@@ -323,7 +323,7 @@ export function SeanceEditor({
           </Card>
         </div>
 
-        <aside className="sticky top-6 flex w-[380px] shrink-0 flex-col gap-3 self-start">
+        <aside className="flex w-full flex-col gap-3 self-start lg:sticky lg:top-6 lg:w-[380px] lg:shrink-0">
           <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
             Aperçu — vue athlète
           </p>
@@ -367,7 +367,7 @@ export function SeanceEditor({
         </aside>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 flex items-center justify-between border-t bg-background px-6 py-3">
+      <div className="fixed inset-x-0 bottom-0 flex flex-wrap items-center justify-between gap-2 border-t bg-background px-6 py-3">
         <div className="flex items-center gap-2">
           {allowSaveAsLibraryCopy && (
             <>

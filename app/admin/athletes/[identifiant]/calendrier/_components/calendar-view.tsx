@@ -319,11 +319,14 @@ export function CalendarView({
           </div>
         </div>
 
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5 overflow-x-auto">
           {weeks.map((week) => {
             const totals = weekTotals(week);
             return (
-              <div key={week[0]} className="grid grid-cols-[repeat(7,1fr)_130px] gap-1.5">
+              <div
+                key={week[0]}
+                className="grid min-w-[820px] grid-cols-[repeat(7,1fr)_130px] gap-1.5"
+              >
                 {week.map((day) => {
                   const daySeances = seancesByDay.get(day) ?? [];
                   const competition = competitionByDay.get(day);

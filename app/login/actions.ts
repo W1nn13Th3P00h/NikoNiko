@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { identifiantToInternalEmail } from "@/lib/athlete-login";
+import { resolvePostLoginPath } from "@/lib/auth-destination";
 
 export async function signInWithMagicLink(formData: FormData) {
   const email = formData.get("email");
@@ -15,7 +16,7 @@ export async function signInWithMagicLink(formData: FormData) {
   const { error } = await supabase.auth.signInWithOtp({
     email: email.trim(),
     options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/confirm?next=/apres-connexion`,
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/confirm`,
     },
   });
 
@@ -35,14 +36,14 @@ export async function signInWithIdentifiant(formData: FormData) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email: identifiantToInternalEmail(identifiant.trim().toLowerCase()),
     password: code,
   });
 
-  if (error) {
+  if (error || !data.user) {
     redirect("/login?error=Identifiant+ou+code+incorrect");
   }
 
-  redirect("/apres-connexion");
+  redirect(await resolvePostLoginPath(data.user.id));
 }
