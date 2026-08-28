@@ -68,5 +68,19 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  return supabaseResponse;
+  // Forward the resolved user id to Server Components via a request header
+  // instead of letting them call auth.getUser() again themselves — see
+  // utils/supabase/server.ts#getCurrentUserId for why a second, independent
+  // call is unsafe here (it can silently invalidate the session). Always
+  // set/clear it here (never pass the incoming request's header through
+  // unchanged) so a client can't spoof it.
+  const forwardedHeaders = new Headers(request.headers);
+  if (user) {
+    forwardedHeaders.set("x-user-id", user.id);
+  } else {
+    forwardedHeaders.delete("x-user-id");
+  }
+  const finalResponse = NextResponse.next({ request: { headers: forwardedHeaders } });
+  supabaseResponse.cookies.getAll().forEach((cookie) => finalResponse.cookies.set(cookie));
+  return finalResponse;
 }
