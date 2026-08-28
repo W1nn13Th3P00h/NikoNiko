@@ -27,9 +27,9 @@ export default async function MonPlanLayout({ children }: { children: React.Reac
         </form>
       </header>
 
-      <main className="flex-1 px-6 pt-7 pb-24">{children}</main>
+      <main className="flex-1 px-6 pt-7 pb-[calc(96px+env(safe-area-inset-bottom))]">{children}</main>
 
-      <nav className="fixed inset-x-0 bottom-0 flex h-[72px] border-t bg-card pb-2">
+      <nav className="fixed inset-x-0 bottom-0 flex h-[calc(72px+env(safe-area-inset-bottom))] border-t bg-card pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
         <Link
           href="/mon-plan"
           className="flex flex-1 flex-col items-center justify-center gap-[5px] text-muted-foreground"

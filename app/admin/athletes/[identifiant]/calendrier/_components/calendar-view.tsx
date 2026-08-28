@@ -196,6 +196,12 @@ export function CalendarView({
     await moveSeanceDate(seanceId, newDate);
   }
 
+  async function handleDelete(seanceId: string, titre: string) {
+    if (!window.confirm(`Supprimer « ${titre} » ?`)) return;
+    const { error } = await deleteSeance(seanceId);
+    if (error) window.alert(`Échec de la suppression : ${error}`);
+  }
+
   const basePerformance = selectBasePerformance(performances);
   const threshold = basePerformance ? computeThresholdPaceSecondsPerKm(basePerformance) : null;
   const paceZones = threshold ? computePaceZones(threshold) : null;
@@ -417,9 +423,9 @@ export function CalendarView({
                                   </Link>
                                   <button
                                     type="button"
-                                    onClick={() => void deleteSeance(s.id)}
-                                    className="text-muted-foreground opacity-0 group-hover:opacity-100"
-                                    aria-label="Supprimer"
+                                    onClick={() => void handleDelete(s.id, s.titre)}
+                                    className="flex size-5 items-center justify-center text-muted-foreground"
+                                    aria-label={`Supprimer ${s.titre}`}
                                   >
                                     ×
                                   </button>
@@ -518,6 +524,7 @@ function AddSeanceDialog({
 }) {
   const router = useRouter();
   const [selectedLibraryId, setSelectedLibraryId] = useState<string>("");
+  const [isCreating, setIsCreating] = useState(false);
 
   return (
     <Dialog open={date !== null} onOpenChange={onOpenChange}>
@@ -581,15 +588,19 @@ function AddSeanceDialog({
               récupérations) dans l&apos;éditeur.
             </p>
             <Button
+              disabled={isCreating}
               onClick={async () => {
-                if (!date) return;
+                if (!date || isCreating) return;
+                setIsCreating(true);
                 const newSeanceId = await createBlankSeance(athleteId, date);
                 if (newSeanceId) {
                   router.push(`/admin/athletes/${athleteIdentifiant}/seances/${newSeanceId}`);
+                } else {
+                  setIsCreating(false);
                 }
               }}
             >
-              Créer et ouvrir l&apos;éditeur
+              {isCreating ? "Création…" : "Créer et ouvrir l'éditeur"}
             </Button>
           </div>
         )}
@@ -624,7 +635,7 @@ function DuplicateWeekDialog({
         <form
           action={async () => {
             if (!weekStart || !targetDay) return;
-            const target = new Date(targetDay);
+            const target = parseISO(targetDay);
             const day = target.getDay(); // 0=dim..6=sam
             const diffToMonday = day === 0 ? -6 : 1 - day;
             target.setDate(target.getDate() + diffToMonday);

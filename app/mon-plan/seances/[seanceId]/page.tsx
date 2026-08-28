@@ -1,7 +1,7 @@
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { getCurrentAthlete } from "@/app/mon-plan/_lib/current-athlete";
 import { BlocList } from "@/app/mon-plan/_components/bloc-list";
@@ -19,7 +19,7 @@ export default async function SeanceDetailPage({
   params: Promise<{ seanceId: string }>;
 }) {
   const athlete = await getCurrentAthlete();
-  if (!athlete) notFound();
+  if (!athlete) redirect("/login");
 
   const { seanceId } = await params;
   const supabase = await createClient();

@@ -107,6 +107,9 @@ export default async function AdminAthleteListPage() {
         <NewAthleteDialog />
       </div>
 
+      {(athletes ?? []).length === 0 ? (
+        <p className="text-muted-foreground text-sm">Aucun athlète pour l&apos;instant.</p>
+      ) : (
       <Table>
         <TableHeader>
           <TableRow>
@@ -165,6 +168,7 @@ export default async function AdminAthleteListPage() {
           })}
         </TableBody>
       </Table>
+      )}
     </div>
   );
 }

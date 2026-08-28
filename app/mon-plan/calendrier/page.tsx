@@ -80,6 +80,9 @@ export default async function AthleteCalendarPage({
     return { dayStr, daySeances };
   }
 
+  const STATUT_GLYPH: Record<string, string> = { fait: "✓", partiel: "◐", non_fait: "✗" };
+  const STATUT_LABEL: Record<string, string> = { fait: "faite", partiel: "en partie", non_fait: "non faite" };
+
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-2xl font-semibold">Calendrier</h1>
@@ -122,7 +125,13 @@ export default async function AthleteCalendarPage({
                           <span className="font-semibold">{s.titre}</span>
                           <span className="text-muted-foreground text-sm">
                             {SEANCE_TYPE_LABELS[s.type]} · {volume.distanceKm} km
-                            {statut && ` · ${statut === "fait" ? "✓" : statut === "partiel" ? "◐" : "✗"}`}
+                            {statut && (
+                              <>
+                                {" · "}
+                                <span aria-hidden="true">{STATUT_GLYPH[statut]}</span>
+                                <span className="sr-only">{STATUT_LABEL[statut]}</span>
+                              </>
+                            )}
                           </span>
                         </Link>
                       </li>
@@ -166,10 +175,17 @@ export default async function AthleteCalendarPage({
                       <Link
                         key={s.id}
                         href={`/mon-plan/seances/${s.id}`}
-                        className="rounded bg-muted/50 px-1 py-0.5 text-xs"
+                        className="flex items-center gap-1 rounded bg-muted/50 px-1 py-0.5 text-xs"
                       >
-                        <span className="font-medium">{s.titre}</span>{" "}
-                        {statut && (statut === "fait" ? "✓" : statut === "partiel" ? "◐" : "✗")}
+                        <span className="truncate font-medium">{s.titre}</span>
+                        {statut && (
+                          <>
+                            <span aria-hidden="true" className="shrink-0">
+                              {STATUT_GLYPH[statut]}
+                            </span>
+                            <span className="sr-only">{STATUT_LABEL[statut]}</span>
+                          </>
+                        )}
                       </Link>
                     );
                   })}

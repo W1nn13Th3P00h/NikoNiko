@@ -107,6 +107,7 @@ export function SeanceEditor({
   const [consignes, setConsignes] = useState(seance.consignes ?? "");
   const [blocs, setBlocs] = useState<DraftBloc[]>(initialBlocs);
   const [saveToLibrary, setSaveToLibrary] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const topLevelBlocs = blocs.filter((b) => b.parentClientId === null);
   const childrenOf = (parentClientId: string) =>
@@ -170,19 +171,24 @@ export function SeanceEditor({
   }
 
   function handleSave() {
+    setSaveError(null);
     startTransition(async () => {
-      await saveSeance(
-        seance.id,
-        {
-          titre,
-          type,
-          objectif: objectif.trim() || null,
-          consignes: consignes.trim() || null,
-        },
-        blocs,
-        { saveAsLibraryCopy: allowSaveAsLibraryCopy && saveToLibrary }
-      );
-      router.push(redirectPath);
+      try {
+        await saveSeance(
+          seance.id,
+          {
+            titre,
+            type,
+            objectif: objectif.trim() || null,
+            consignes: consignes.trim() || null,
+          },
+          blocs,
+          { saveAsLibraryCopy: allowSaveAsLibraryCopy && saveToLibrary }
+        );
+        router.push(redirectPath);
+      } catch {
+        setSaveError("Échec de l'enregistrement, réessaie.");
+      }
     });
   }
 
@@ -276,7 +282,16 @@ export function SeanceEditor({
                     bloc={bloc}
                     performances={performances}
                     onChange={(patch) => updateBloc(bloc.clientId, patch)}
-                    onRemove={() => removeBloc(bloc.clientId)}
+                    onRemove={() => {
+                      const childCount = childrenOf(bloc.clientId).length;
+                      if (
+                        childCount > 0 &&
+                        !window.confirm(`Supprimer ce bloc et ses ${childCount} sous-blocs ?`)
+                      ) {
+                        return;
+                      }
+                      removeBloc(bloc.clientId);
+                    }}
                     onDuplicate={() => duplicateBloc(bloc.clientId)}
                     onMoveUp={index > 0 ? () => moveBloc(bloc.clientId, -1) : undefined}
                     onMoveDown={index < topLevelBlocs.length - 1 ? () => moveBloc(bloc.clientId, 1) : undefined}
@@ -365,7 +380,8 @@ export function SeanceEditor({
             </>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          {saveError && <p className="text-destructive text-sm">{saveError}</p>}
           <Button variant="outline" onClick={() => router.push(redirectPath)}>
             Annuler
           </Button>
