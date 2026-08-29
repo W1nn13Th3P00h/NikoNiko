@@ -178,8 +178,8 @@ export type Database = {
           athlete_id: string
           created_at: string
           date: string
-          distance: Database["public"]["Enums"]["distance_ref"] | null
-          distance_metres_custom: number | null
+          denivele_metres_dplus: number | null
+          distance: string
           id: string
           lieu: string | null
           nom: string
@@ -193,8 +193,8 @@ export type Database = {
           athlete_id: string
           created_at?: string
           date: string
-          distance?: Database["public"]["Enums"]["distance_ref"] | null
-          distance_metres_custom?: number | null
+          denivele_metres_dplus?: number | null
+          distance: string
           id?: string
           lieu?: string | null
           nom: string
@@ -208,8 +208,8 @@ export type Database = {
           athlete_id?: string
           created_at?: string
           date?: string
-          distance?: Database["public"]["Enums"]["distance_ref"] | null
-          distance_metres_custom?: number | null
+          denivele_metres_dplus?: number | null
+          distance?: string
           id?: string
           lieu?: string | null
           nom?: string

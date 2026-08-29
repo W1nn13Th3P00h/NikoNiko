@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createPerformance, updatePerformance } from "../actions";
+import { createPerformance, updatePerformance, deletePerformance } from "../actions";
 import {
   DISTANCE_LABELS,
   PERFORMANCE_TYPE_LABELS,
@@ -79,6 +79,20 @@ export function PerformanceDialog({
     });
   }
 
+  function handleDelete() {
+    if (!existing) return;
+    if (!window.confirm("Supprimer cette performance ?")) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await deletePerformance(existing.id, athleteId);
+      if (result.error) {
+        setError(result.error);
+      } else {
+        setOpen(false);
+      }
+    });
+  }
+
   return (
     <Dialog
       open={open}
@@ -141,9 +155,16 @@ export function PerformanceDialog({
             </div>
           </div>
           {error && <p className="text-destructive text-sm">{error}</p>}
-          <Button onClick={handleSubmit} disabled={isPending} className="self-start">
-            {isPending ? "Enregistrement…" : "Enregistrer"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={handleSubmit} disabled={isPending}>
+              {isPending ? "Enregistrement…" : "Enregistrer"}
+            </Button>
+            {existing && (
+              <Button variant="destructive" onClick={handleDelete} disabled={isPending}>
+                Supprimer
+              </Button>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

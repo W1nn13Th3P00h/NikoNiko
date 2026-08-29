@@ -30,10 +30,10 @@ insert into performance_reference (athlete_id, distance, temps_secondes, date_pe
 -- Compétitions
 -- =========================================================================
 
-insert into competition (athlete_id, nom, date, lieu, distance, distance_metres_custom, objectif_temps_secondes, objectif_texte, priorite) values
-  ('a1111111-1111-1111-1111-111111111111', 'Course des Lumières', '2026-10-11', 'Lyon', '10k', null, 3300, null, 'A'),
-  ('a2222222-2222-2222-2222-222222222222', 'Semi de Paris', '2027-03-01', 'Paris', 'semi', null, 5400, null, 'A'),
-  ('a3333333-3333-3333-3333-333333333333', 'Trail des Calades', '2026-09-20', 'Cassis', null, 28000, null, 'finir sans marcher', 'A');
+insert into competition (athlete_id, nom, date, lieu, distance, denivele_metres_dplus, objectif_temps_secondes, objectif_texte, priorite) values
+  ('a1111111-1111-1111-1111-111111111111', 'Course des Lumières', '2026-10-11', 'Lyon', '10 km', null, 3300, null, 'A'),
+  ('a2222222-2222-2222-2222-222222222222', 'Semi de Paris', '2027-03-01', 'Paris', 'Semi-marathon', null, 5400, null, 'A'),
+  ('a3333333-3333-3333-3333-333333333333', 'Trail des Calades', '2026-09-20', 'Cassis', '28 km', 1200, null, 'finir sans marcher', 'A');
 
 -- =========================================================================
 -- Bibliothèque de séances (est_modele = true)
