@@ -9,6 +9,7 @@ import {
   isValidIdentifiant,
 } from "@/lib/athlete-login";
 import type { Database } from "@/lib/database.types";
+import type { ZoneAllure } from "@/lib/paces";
 
 type DistanceRef = Database["public"]["Enums"]["distance_ref"];
 type PerformanceType = Database["public"]["Enums"]["performance_type"];
@@ -163,6 +164,69 @@ export async function updateCompetition(
 
   if (error) return { error: error.message };
   revalidatePath(`/admin/athletes/${athleteId}`);
+  return {};
+}
+
+// Manual zone overrides always replace the full pace pair or the full FC
+// pair together (never a lone bound) — a zone with only a max and no min
+// (or vice versa) isn't a meaningful target to give an athlete.
+export async function upsertZoneManuelle(
+  athleteId: string,
+  data: {
+    zone: ZoneAllure;
+    paceMinSecondesParKm: number | null;
+    paceMaxSecondesParKm: number | null;
+    fcMinBpm: number | null;
+    fcMaxBpm: number | null;
+  }
+): Promise<{ error?: string }> {
+  const hasPace = data.paceMinSecondesParKm !== null || data.paceMaxSecondesParKm !== null;
+  const hasFc = data.fcMinBpm !== null || data.fcMaxBpm !== null;
+
+  if (!hasPace && !hasFc) return { error: "Renseignez une allure ou une FC." };
+  if (hasPace && (data.paceMinSecondesParKm === null || data.paceMaxSecondesParKm === null)) {
+    return { error: "Allure : bornes min et max requises." };
+  }
+  if (hasPace && data.paceMinSecondesParKm! >= data.paceMaxSecondesParKm!) {
+    return { error: "Allure : la borne min doit être plus rapide que la max." };
+  }
+  if (hasFc && (data.fcMinBpm === null || data.fcMaxBpm === null)) {
+    return { error: "FC : bornes min et max requises." };
+  }
+  if (hasFc && data.fcMinBpm! >= data.fcMaxBpm!) {
+    return { error: "FC : la borne min doit être inférieure à la max." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("zone_manuelle").upsert(
+    {
+      athlete_id: athleteId,
+      zone: data.zone,
+      allure_min_secondes_par_km: data.paceMinSecondesParKm,
+      allure_max_secondes_par_km: data.paceMaxSecondesParKm,
+      fc_min_bpm: data.fcMinBpm,
+      fc_max_bpm: data.fcMaxBpm,
+    },
+    { onConflict: "athlete_id,zone" }
+  );
+
+  if (error) return { error: error.message };
+  revalidatePath(`/admin/athletes/${athleteId}`);
+  revalidatePath(`/admin/athletes/${athleteId}/calendrier`);
+  return {};
+}
+
+export async function deleteZoneManuelle(athleteId: string, zone: ZoneAllure): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("zone_manuelle")
+    .delete()
+    .eq("athlete_id", athleteId)
+    .eq("zone", zone);
+
+  if (error) return { error: error.message };
+  revalidatePath(`/admin/athletes/${athleteId}`);
+  revalidatePath(`/admin/athletes/${athleteId}/calendrier`);
   return {};
 }
 

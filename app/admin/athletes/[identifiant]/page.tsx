@@ -2,17 +2,16 @@ import { format } from "date-fns";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
-import { toPerformanceReference } from "@/lib/mappers";
+import { toPerformanceReference, toZoneManualOverrides } from "@/lib/mappers";
 import { nowInParis } from "@/lib/date";
 import {
   DISTANCE_LABELS,
   PERFORMANCE_TYPE_LABELS,
   ZONE_LABELS,
-  computeHeartRateZones,
-  computePaceZones,
-  computeThresholdPaceSecondsPerKm,
   formatDurationHMS,
   formatPaceSecondsPerKm,
+  resolveHeartRateZones,
+  resolvePaceZones,
   selectBasePerformance,
   type ZoneAllure,
 } from "@/lib/paces";
@@ -39,6 +38,7 @@ import { CredentialsForm } from "./_components/credentials-form";
 import { AthleteInfoForm } from "./_components/athlete-info-form";
 import { PerformanceDialog } from "./_components/performance-dialog";
 import { CompetitionDialog } from "./_components/competition-dialog";
+import { ZoneManuelleDialog } from "./_components/zone-manuelle-dialog";
 
 const ZONE_ORDER: ZoneAllure[] = [
   "z1_recup",
@@ -65,27 +65,28 @@ export default async function AthleteDetailPage({
 
   if (!athlete) notFound();
 
-  const [{ data: performanceRows }, { data: competitions }, { data: note }] = await Promise.all([
-    supabase
-      .from("performance_reference")
-      .select("*")
-      .eq("athlete_id", athlete.id)
-      .order("date_perf", { ascending: false }),
-    supabase
-      .from("competition")
-      .select("*")
-      .eq("athlete_id", athlete.id)
-      .gte("date", format(nowInParis(), "yyyy-MM-dd"))
-      .order("date"),
-    supabase.from("athlete_note").select("contenu").eq("athlete_id", athlete.id).maybeSingle(),
-  ]);
+  const [{ data: performanceRows }, { data: zoneManuelleRows }, { data: competitions }, { data: note }] =
+    await Promise.all([
+      supabase
+        .from("performance_reference")
+        .select("*")
+        .eq("athlete_id", athlete.id)
+        .order("date_perf", { ascending: false }),
+      supabase.from("zone_manuelle").select("*").eq("athlete_id", athlete.id),
+      supabase
+        .from("competition")
+        .select("*")
+        .eq("athlete_id", athlete.id)
+        .gte("date", format(nowInParis(), "yyyy-MM-dd"))
+        .order("date"),
+      supabase.from("athlete_note").select("contenu").eq("athlete_id", athlete.id).maybeSingle(),
+    ]);
 
   const performances = (performanceRows ?? []).map(toPerformanceReference);
   const basePerformance = selectBasePerformance(performances);
-  const paceZones = basePerformance
-    ? computePaceZones(computeThresholdPaceSecondsPerKm(basePerformance))
-    : null;
-  const heartRateZones = athlete.fc_max ? computeHeartRateZones(athlete.fc_max) : null;
+  const zoneOverrides = toZoneManualOverrides(zoneManuelleRows ?? []);
+  const paceZones = resolvePaceZones(performances, zoneOverrides);
+  const heartRateZones = resolveHeartRateZones(athlete.fc_max, zoneOverrides);
 
   return (
     <div className="flex flex-col gap-6">
@@ -191,41 +192,73 @@ export default async function AthleteDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Zones d&apos;allure et de FC calculées</CardTitle>
+          <CardTitle>Zones d&apos;allure et de FC</CardTitle>
         </CardHeader>
         <CardContent>
-          {!paceZones ? (
-            <p className="text-muted-foreground text-sm">
-              Pas de performance de référence : impossible de calculer les zones.
+          {!basePerformance && !athlete.fc_max && (
+            <p className="text-muted-foreground mb-3 text-sm">
+              Pas de performance de référence ni de FC max : les zones ne peuvent être que
+              saisies à la main, zone par zone.
             </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Zone</TableHead>
-                  <TableHead>Allure</TableHead>
-                  <TableHead>FC</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {ZONE_ORDER.map((zone) => {
-                  const pace = paceZones[zone];
-                  const hr = heartRateZones?.[zone];
-                  return (
-                    <TableRow key={zone}>
-                      <TableCell>{ZONE_LABELS[zone]}</TableCell>
-                      <TableCell>
-                        {pace.minSecondsPerKm === null
-                          ? `< ${formatPaceSecondsPerKm(pace.maxSecondsPerKm)}`
-                          : `${formatPaceSecondsPerKm(pace.minSecondsPerKm)} – ${formatPaceSecondsPerKm(pace.maxSecondsPerKm)}`}
-                      </TableCell>
-                      <TableCell>{hr ? `${hr.minBpm} – ${hr.maxBpm} bpm` : "—"}</TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
           )}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Zone</TableHead>
+                <TableHead>Allure</TableHead>
+                <TableHead>FC</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {ZONE_ORDER.map((zone) => {
+                const pace = paceZones[zone];
+                const hr = heartRateZones[zone];
+                const manuelleRow = (zoneManuelleRows ?? []).find((r) => r.zone === zone);
+                return (
+                  <TableRow key={zone}>
+                    <TableCell>
+                      {ZONE_LABELS[zone]}
+                      {(pace.isManual || hr.isManual) && (
+                        <Badge variant="secondary" className="ml-2">
+                          Manuel
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {!pace.range
+                        ? "—"
+                        : pace.range.minSecondsPerKm === null
+                          ? `< ${formatPaceSecondsPerKm(pace.range.maxSecondsPerKm)}`
+                          : `${formatPaceSecondsPerKm(pace.range.minSecondsPerKm)} – ${formatPaceSecondsPerKm(pace.range.maxSecondsPerKm)}`}
+                    </TableCell>
+                    <TableCell>{hr.range ? `${hr.range.minBpm} – ${hr.range.maxBpm} bpm` : "—"}</TableCell>
+                    <TableCell>
+                      <ZoneManuelleDialog
+                        athleteId={athlete.id}
+                        zone={zone}
+                        existing={
+                          manuelleRow
+                            ? {
+                                paceMinSecondesParKm: manuelleRow.allure_min_secondes_par_km,
+                                paceMaxSecondesParKm: manuelleRow.allure_max_secondes_par_km,
+                                fcMinBpm: manuelleRow.fc_min_bpm,
+                                fcMaxBpm: manuelleRow.fc_max_bpm,
+                              }
+                            : undefined
+                        }
+                        trigger={
+                          <Button variant="ghost" size="sm">
+                            {manuelleRow ? "Éditer" : "Saisir à la main"}
+                          </Button>
+                        }
+                      />
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 

@@ -3,12 +3,16 @@
 // admin and athlete routes share one conversion instead of re-deriving it.
 
 import type { Database } from "./database.types";
-import type { PerformanceReference } from "./paces";
+import type { PerformanceReference, ZoneManualOverrides } from "./paces";
 import type { BlocSeanceInput } from "./volume";
 
 type PerformanceRow = Pick<
   Database["public"]["Tables"]["performance_reference"]["Row"],
   "distance" | "temps_secondes" | "date_perf" | "type"
+>;
+type ZoneManuelleRow = Pick<
+  Database["public"]["Tables"]["zone_manuelle"]["Row"],
+  "zone" | "allure_min_secondes_par_km" | "allure_max_secondes_par_km" | "fc_min_bpm" | "fc_max_bpm"
 >;
 type BlocRow = Database["public"]["Tables"]["bloc_seance"]["Row"];
 type BlocRole = Database["public"]["Enums"]["bloc_role"];
@@ -39,6 +43,19 @@ export function toPerformanceReference(row: PerformanceRow): PerformanceReferenc
     datePerf: row.date_perf,
     type: row.type,
   };
+}
+
+export function toZoneManualOverrides(rows: ZoneManuelleRow[]): ZoneManualOverrides {
+  const overrides: ZoneManualOverrides = {};
+  for (const row of rows) {
+    overrides[row.zone] = {
+      paceMinSecondsPerKm: row.allure_min_secondes_par_km,
+      paceMaxSecondsPerKm: row.allure_max_secondes_par_km,
+      fcMinBpm: row.fc_min_bpm,
+      fcMaxBpm: row.fc_max_bpm,
+    };
+  }
+  return overrides;
 }
 
 export function toBlocSeanceInput(row: BlocRow): BlocSeanceInput {

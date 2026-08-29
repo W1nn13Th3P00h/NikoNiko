@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
-import { toPerformanceReference } from "@/lib/mappers";
+import { toPerformanceReference, toZoneManualOverrides } from "@/lib/mappers";
 import { blocRowToDraft } from "@/app/admin/_lib/draft";
 import { SeanceEditor } from "@/app/admin/_components/seance-editor";
 
@@ -20,7 +20,7 @@ export default async function SeanceEditorPage({
 
   if (!athlete) notFound();
 
-  const [{ data: seance }, { data: blocRows }, { data: performanceRows }, { data: retour }] =
+  const [{ data: seance }, { data: blocRows }, { data: performanceRows }, { data: zoneManuelleRows }, { data: retour }] =
     await Promise.all([
       supabase
         .from("seance")
@@ -34,6 +34,10 @@ export default async function SeanceEditorPage({
         .from("performance_reference")
         .select("distance, temps_secondes, date_perf, type")
         .eq("athlete_id", athlete.id),
+      supabase
+        .from("zone_manuelle")
+        .select("zone, allure_min_secondes_par_km, allure_max_secondes_par_km, fc_min_bpm, fc_max_bpm")
+        .eq("athlete_id", athlete.id),
       supabase.from("retour_seance").select("*").eq("seance_id", seanceId).maybeSingle(),
     ]);
 
@@ -45,6 +49,7 @@ export default async function SeanceEditorPage({
       seance={seance}
       initialBlocs={(blocRows ?? []).map(blocRowToDraft)}
       performances={(performanceRows ?? []).map(toPerformanceReference)}
+      zoneOverrides={toZoneManualOverrides(zoneManuelleRows ?? [])}
       redirectPath={`/admin/athletes/${identifiant}/calendrier`}
       allowSaveAsLibraryCopy
       retour={retour ?? null}

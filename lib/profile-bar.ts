@@ -4,7 +4,7 @@
 // each colored by its target zone.
 
 import { computeBlocOwnVolume, type BlocSeanceInput } from "./volume";
-import type { PerformanceReference } from "./paces";
+import type { PerformanceReference, ZoneManualOverrides } from "./paces";
 import { ZONE_COLORS } from "./zone-colors";
 
 export interface ProfileSegment {
@@ -14,7 +14,8 @@ export interface ProfileSegment {
 
 export function computeProfileSegments(
   blocs: BlocSeanceInput[],
-  performances: PerformanceReference[]
+  performances: PerformanceReference[],
+  overrides: ZoneManualOverrides = {}
 ): ProfileSegment[] {
   const childrenByParent = new Map<string, BlocSeanceInput[]>();
   for (const b of blocs) {
@@ -36,7 +37,7 @@ export function computeProfileSegments(
       if (children.length > 0) {
         for (const child of children) visit(child);
       } else {
-        const own = computeBlocOwnVolume(bloc, performances);
+        const own = computeBlocOwnVolume(bloc, performances, overrides);
         // A zero-duration segment (e.g. missing reference) would otherwise
         // collapse to an invisible sliver — keep it visible with a floor.
         segments.push({ weightSeconds: own.dureeSecondes || 1, color: colorFor(bloc) });

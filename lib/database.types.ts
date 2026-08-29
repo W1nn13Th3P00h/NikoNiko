@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   graphql_public: {
     Tables: {
@@ -379,6 +379,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "seance_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "athlete"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zone_manuelle: {
+        Row: {
+          allure_max_secondes_par_km: number | null
+          allure_min_secondes_par_km: number | null
+          athlete_id: string
+          created_at: string
+          fc_max_bpm: number | null
+          fc_min_bpm: number | null
+          id: string
+          updated_at: string
+          zone: Database["public"]["Enums"]["cible_zone"]
+        }
+        Insert: {
+          allure_max_secondes_par_km?: number | null
+          allure_min_secondes_par_km?: number | null
+          athlete_id: string
+          created_at?: string
+          fc_max_bpm?: number | null
+          fc_min_bpm?: number | null
+          id?: string
+          updated_at?: string
+          zone: Database["public"]["Enums"]["cible_zone"]
+        }
+        Update: {
+          allure_max_secondes_par_km?: number | null
+          allure_min_secondes_par_km?: number | null
+          athlete_id?: string
+          created_at?: string
+          fc_max_bpm?: number | null
+          fc_min_bpm?: number | null
+          id?: string
+          updated_at?: string
+          zone?: Database["public"]["Enums"]["cible_zone"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zone_manuelle_athlete_id_fkey"
             columns: ["athlete_id"]
             isOneToOne: false
             referencedRelation: "athlete"

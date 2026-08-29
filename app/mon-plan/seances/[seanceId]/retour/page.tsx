@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { getCurrentAthlete } from "@/app/mon-plan/_lib/current-athlete";
-import { toBlocSeanceInput, toPerformanceReference } from "@/lib/mappers";
+import { toBlocSeanceInput, toPerformanceReference, toZoneManualOverrides } from "@/lib/mappers";
 import { computeSeanceVolume } from "@/lib/volume";
 import { nowInParis } from "@/lib/date";
 import { RetourForm } from "../_components/retour-form";
@@ -20,22 +20,31 @@ export default async function RetourSeancePage({
   const { seanceId } = await params;
   const supabase = await createClient();
 
-  const [{ data: seance }, { data: blocRows }, { data: performanceRows }, { data: retour }] =
-    await Promise.all([
-      supabase
-        .from("seance")
-        .select("*")
-        .eq("id", seanceId)
-        .eq("athlete_id", athlete.id)
-        .eq("est_modele", false)
-        .single(),
-      supabase.from("bloc_seance").select("*").eq("seance_id", seanceId).order("ordre"),
-      supabase
-        .from("performance_reference")
-        .select("distance, temps_secondes, date_perf, type")
-        .eq("athlete_id", athlete.id),
-      supabase.from("retour_seance").select("*").eq("seance_id", seanceId).maybeSingle(),
-    ]);
+  const [
+    { data: seance },
+    { data: blocRows },
+    { data: performanceRows },
+    { data: zoneManuelleRows },
+    { data: retour },
+  ] = await Promise.all([
+    supabase
+      .from("seance")
+      .select("*")
+      .eq("id", seanceId)
+      .eq("athlete_id", athlete.id)
+      .eq("est_modele", false)
+      .single(),
+    supabase.from("bloc_seance").select("*").eq("seance_id", seanceId).order("ordre"),
+    supabase
+      .from("performance_reference")
+      .select("distance, temps_secondes, date_perf, type")
+      .eq("athlete_id", athlete.id),
+    supabase
+      .from("zone_manuelle")
+      .select("zone, allure_min_secondes_par_km, allure_max_secondes_par_km, fc_min_bpm, fc_max_bpm")
+      .eq("athlete_id", athlete.id),
+    supabase.from("retour_seance").select("*").eq("seance_id", seanceId).maybeSingle(),
+  ]);
 
   if (!seance || !seance.date_prevue) notFound();
 
@@ -45,7 +54,8 @@ export default async function RetourSeancePage({
   }
 
   const performances = (performanceRows ?? []).map(toPerformanceReference);
-  const volume = computeSeanceVolume((blocRows ?? []).map(toBlocSeanceInput), performances);
+  const zoneOverrides = toZoneManualOverrides(zoneManuelleRows ?? []);
+  const volume = computeSeanceVolume((blocRows ?? []).map(toBlocSeanceInput), performances, zoneOverrides);
   const daysSince = differenceInCalendarDays(parseISO(todayStr), parseISO(seance.date_prevue));
   const editable = daysSince <= 7;
 

@@ -2,7 +2,7 @@ import { format } from "date-fns";
 import { notFound } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { nowInParis } from "@/lib/date";
-import { toPerformanceReference } from "@/lib/mappers";
+import { toPerformanceReference, toZoneManualOverrides } from "@/lib/mappers";
 import { getMonthGridWeeks, getWeekGridDays } from "@/lib/calendar-grid";
 import { CalendarView } from "./_components/calendar-view";
 
@@ -42,6 +42,7 @@ export default async function AthleteCalendarPage({
     { data: librarySeances },
     { data: gridSeances },
     { data: performanceRows },
+    { data: zoneManuelleRows },
     { data: gridCompetitions },
     { data: nextCompetition },
   ] = await Promise.all([
@@ -58,6 +59,10 @@ export default async function AthleteCalendarPage({
     supabase
       .from("performance_reference")
       .select("distance, temps_secondes, date_perf, type")
+      .eq("athlete_id", athlete.id),
+    supabase
+      .from("zone_manuelle")
+      .select("zone, allure_min_secondes_par_km, allure_max_secondes_par_km, fc_min_bpm, fc_max_bpm")
       .eq("athlete_id", athlete.id),
     supabase
       .from("competition")
@@ -100,6 +105,7 @@ export default async function AthleteCalendarPage({
       competitions={gridCompetitions ?? []}
       nextCompetition={nextCompetition ?? null}
       performances={(performanceRows ?? []).map(toPerformanceReference)}
+      zoneOverrides={toZoneManualOverrides(zoneManuelleRows ?? [])}
       view={view}
       density={density}
       referenceDate={format(referenceDate, "yyyy-MM-dd")}
