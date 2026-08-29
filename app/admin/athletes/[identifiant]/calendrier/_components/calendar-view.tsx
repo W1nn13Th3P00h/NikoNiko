@@ -341,17 +341,19 @@ export function CalendarView({
                     return (
                       <div
                         key={day}
-                        className="flex flex-col gap-1.5 rounded-[3px] bg-foreground p-2.5 text-background"
-                        style={{ height: density === "compact" ? 44 : 132 }}
+                        className="flex flex-col gap-1.5 overflow-hidden rounded-[3px] bg-foreground p-2.5 text-background"
+                        style={{ minHeight: density === "compact" ? 44 : 132 }}
                       >
                         <span className="font-mono text-[11px] opacity-70">
                           {format(parseISO(day), "d MMM", { locale: fr })}
                         </span>
-                        <span className="text-[11px] font-bold tracking-[0.09em] uppercase">
-                          Compétition
-                        </span>
+                        {density === "detaille" && (
+                          <span className="text-[11px] font-bold tracking-[0.09em] uppercase">
+                            Compétition
+                          </span>
+                        )}
                         <span className="text-[13px] font-semibold">{competition.nom}</span>
-                        {competition.objectif_temps_secondes && (
+                        {density === "detaille" && competition.objectif_temps_secondes && (
                           <span className="font-mono text-xs opacity-70">
                             objectif{" "}
                             {Math.floor(competition.objectif_temps_secondes / 60)}:
@@ -371,7 +373,7 @@ export function CalendarView({
                         const seanceId = e.dataTransfer.getData("text/plain");
                         if (seanceId) void handleDrop(seanceId, day);
                       }}
-                      className={`relative flex flex-col gap-1 overflow-hidden rounded-[3px] border bg-card p-2 ${
+                      className={`@container relative flex flex-col gap-1 overflow-hidden rounded-[3px] border bg-card p-2 ${
                         isToday ? "border-foreground" : ""
                       } ${inCurrentMonth ? "" : "opacity-50"}`}
                       style={{ minHeight: density === "compact" ? 44 : 132 }}
@@ -419,17 +421,20 @@ export function CalendarView({
                                     style={{ backgroundColor: seanceTypeColor(s.type) }}
                                   />
                                 )}
-                                <div className="flex items-start justify-between gap-1 pr-6">
+                                <div
+                                  className={`flex items-start justify-between gap-1 ${retour?.rpe ? "pr-6" : ""}`}
+                                >
                                   <Link
                                     href={`/admin/athletes/${athlete.identifiant}/seances/${s.id}`}
-                                    className="text-[13px] leading-tight font-semibold hover:underline"
+                                    title={s.titre}
+                                    className="line-clamp-2 min-w-0 flex-1 text-[clamp(11px,8cqw,13px)] leading-tight font-semibold break-words hover:underline"
                                   >
                                     {s.titre}
                                   </Link>
                                   <button
                                     type="button"
                                     onClick={() => void handleDelete(s.id, s.titre)}
-                                    className="flex size-5 items-center justify-center text-muted-foreground"
+                                    className="flex size-5 shrink-0 items-center justify-center text-muted-foreground"
                                     aria-label={`Supprimer ${s.titre}`}
                                   >
                                     ×
