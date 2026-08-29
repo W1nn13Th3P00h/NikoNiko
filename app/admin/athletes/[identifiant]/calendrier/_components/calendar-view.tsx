@@ -5,9 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { addMonths, addWeeks, differenceInCalendarDays, format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
+import { Trash2 } from "lucide-react";
 import { computeSeanceVolume } from "@/lib/volume";
 import { toBlocSeanceInput } from "@/lib/mappers";
 import {
+  formatDurationHMS,
   formatPaceSecondsPerKm,
   resolvePaceZones,
   ZONE_SHORT_LABELS,
@@ -355,9 +357,7 @@ export function CalendarView({
                         <span className="text-[13px] font-semibold">{competition.nom}</span>
                         {density === "detaille" && competition.objectif_temps_secondes && (
                           <span className="font-mono text-xs opacity-70">
-                            objectif{" "}
-                            {Math.floor(competition.objectif_temps_secondes / 60)}:
-                            {String(competition.objectif_temps_secondes % 60).padStart(2, "0")}
+                            objectif {formatDurationHMS(competition.objectif_temps_secondes)}
                           </span>
                         )}
                       </div>
@@ -434,10 +434,10 @@ export function CalendarView({
                                   <button
                                     type="button"
                                     onClick={() => void handleDelete(s.id, s.titre)}
-                                    className="flex size-5 shrink-0 items-center justify-center text-muted-foreground"
+                                    className="flex size-5 shrink-0 items-center justify-center rounded-[3px] text-red-500 hover:bg-red-500/10 hover:text-red-600"
                                     aria-label={`Supprimer ${s.titre}`}
                                   >
-                                    ×
+                                    <Trash2 className="size-3.5" />
                                   </button>
                                 </div>
                                 {density === "detaille" && (
