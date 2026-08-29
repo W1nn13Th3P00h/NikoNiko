@@ -33,7 +33,8 @@ import {
   draftToBlocDisplayItem,
   draftToBlocSeanceInput,
 } from "../_lib/draft";
-import { saveSeance } from "../_lib/seance-actions";
+import { saveSeance, deleteSeance } from "../_lib/seance-actions";
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -107,6 +108,8 @@ export function SeanceEditor({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isDeleting, startDeleteTransition] = useTransition();
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [titre, setTitre] = useState(seance.titre);
   const [type, setType] = useState<SeanceType>(seance.type);
@@ -196,6 +199,19 @@ export function SeanceEditor({
       } catch {
         setSaveError("Échec de l'enregistrement, réessaie.");
       }
+    });
+  }
+
+  function handleDelete() {
+    if (!window.confirm(`Supprimer « ${seance.titre} » ? Cette action est irréversible.`)) return;
+    setDeleteError(null);
+    startDeleteTransition(async () => {
+      const { error } = await deleteSeance(seance.id);
+      if (error) {
+        setDeleteError("Échec de la suppression, réessaie.");
+        return;
+      }
+      router.push(redirectPath);
     });
   }
 
@@ -380,8 +396,13 @@ export function SeanceEditor({
         </aside>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 flex flex-wrap items-center justify-between gap-2 border-t bg-background px-6 py-3">
-        <div className="flex items-center gap-2">
+      <div className="fixed inset-x-0 bottom-0 flex flex-wrap items-center justify-between gap-2 border-t bg-background px-6 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+        <div className="flex items-center gap-3">
+          <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+            <Trash2 />
+            {isDeleting ? "Suppression…" : "Supprimer la séance"}
+          </Button>
+          {deleteError && <p className="text-destructive text-sm">{deleteError}</p>}
           {allowSaveAsLibraryCopy && (
             <>
               <Checkbox

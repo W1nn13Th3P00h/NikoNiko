@@ -117,3 +117,13 @@ export async function saveSeance(
 
   revalidatePath("/admin", "layout");
 }
+
+// Works for any séance row — an athlete's occurrence or a library
+// template — since deleting cascades to its blocs (and, for an occurrence,
+// its retour) at the database level.
+export async function deleteSeance(seanceId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("seance").delete().eq("id", seanceId);
+  revalidatePath("/admin", "layout");
+  return { error: error ? error.message : null };
+}
