@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createCompetition, updateCompetition } from "../actions";
-import { DISTANCE_LABELS, formatDurationHMS, parseDurationHMS, type DistanceRef } from "@/lib/paces";
+import { createCompetition, updateCompetition, deleteCompetition } from "../actions";
+import { formatDurationHMS, parseDurationHMS } from "@/lib/paces";
 import type { Database } from "@/lib/database.types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,6 @@ import {
 
 type PrioriteCompetition = Database["public"]["Enums"]["priorite_competition"];
 
-const DISTANCE_OPTIONS: (DistanceRef | "autre")[] = ["5k", "10k", "semi", "marathon", "autre"];
 const PRIORITE_OPTIONS: PrioriteCompetition[] = ["A", "B", "C"];
 
 export function CompetitionDialog({
@@ -40,8 +39,8 @@ export function CompetitionDialog({
     nom: string;
     date: string;
     lieu: string | null;
-    distance: DistanceRef | null;
-    distanceMetresCustom: number | null;
+    distance: string;
+    deniveleMetresDplus: number | null;
     objectifTempsSecondes: number | null;
     objectifTexte: string | null;
     priorite: PrioriteCompetition;
@@ -51,9 +50,9 @@ export function CompetitionDialog({
   const [nom, setNom] = useState(existing?.nom ?? "");
   const [date, setDate] = useState(existing?.date ?? "");
   const [lieu, setLieu] = useState(existing?.lieu ?? "");
-  const [distanceMode, setDistanceMode] = useState<DistanceRef | "autre">(existing?.distance ?? "10k");
-  const [distanceMetresCustom, setDistanceMetresCustom] = useState(
-    existing?.distanceMetresCustom?.toString() ?? ""
+  const [distance, setDistance] = useState(existing?.distance ?? "");
+  const [deniveleMetresDplus, setDeniveleMetresDplus] = useState(
+    existing?.deniveleMetresDplus?.toString() ?? ""
   );
   const [objectifTemps, setObjectifTemps] = useState(
     existing?.objectifTempsSecondes ? formatDurationHMS(existing.objectifTempsSecondes) : ""
@@ -73,8 +72,8 @@ export function CompetitionDialog({
       setError("Date requise.");
       return;
     }
-    if (distanceMode === "autre" && !distanceMetresCustom) {
-      setError("Distance (en mètres) requise.");
+    if (!distance.trim()) {
+      setError("Distance requise.");
       return;
     }
     let objectifTempsSecondes: number | null = null;
@@ -90,8 +89,8 @@ export function CompetitionDialog({
       nom,
       date,
       lieu: lieu.trim() || null,
-      distance: distanceMode === "autre" ? null : distanceMode,
-      distanceMetresCustom: distanceMode === "autre" ? Number(distanceMetresCustom) : null,
+      distance,
+      deniveleMetresDplus: deniveleMetresDplus.trim() ? Number(deniveleMetresDplus) : null,
       objectifTempsSecondes,
       objectifTexte: objectifTexte.trim() || null,
       priorite,
@@ -101,6 +100,20 @@ export function CompetitionDialog({
       const result = existing
         ? await updateCompetition(existing.id, athleteId, payload)
         : await createCompetition(athleteId, payload);
+      if (result.error) {
+        setError(result.error);
+      } else {
+        setOpen(false);
+      }
+    });
+  }
+
+  function handleDelete() {
+    if (!existing) return;
+    if (!window.confirm(`Supprimer la compétition « ${existing.nom} » ?`)) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await deleteCompetition(existing.id, athleteId);
       if (result.error) {
         setError(result.error);
       } else {
@@ -139,34 +152,23 @@ export function CompetitionDialog({
           </div>
           <div className="flex gap-3">
             <div className="flex flex-1 flex-col gap-1.5">
-              <Label>Distance</Label>
-              <Select
-                value={distanceMode}
-                onValueChange={(v) => v && setDistanceMode(v as DistanceRef | "autre")}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DISTANCE_OPTIONS.map((d) => (
-                    <SelectItem key={d} value={d}>
-                      {d === "autre" ? "Autre (trail, distance libre…)" : DISTANCE_LABELS[d]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="distance">Distance</Label>
+              <Input
+                id="distance"
+                value={distance}
+                onChange={(e) => setDistance(e.target.value)}
+                placeholder="ex: 10 km, Semi-marathon, Trail 28 km…"
+              />
             </div>
-            {distanceMode === "autre" && (
-              <div className="flex flex-1 flex-col gap-1.5">
-                <Label htmlFor="distance_metres">Distance (mètres)</Label>
-                <Input
-                  id="distance_metres"
-                  type="number"
-                  value={distanceMetresCustom}
-                  onChange={(e) => setDistanceMetresCustom(e.target.value)}
-                />
-              </div>
-            )}
+            <div className="flex flex-1 flex-col gap-1.5">
+              <Label htmlFor="denivele">D+ (mètres, optionnel)</Label>
+              <Input
+                id="denivele"
+                type="number"
+                value={deniveleMetresDplus}
+                onChange={(e) => setDeniveleMetresDplus(e.target.value)}
+              />
+            </div>
             <div className="flex flex-1 flex-col gap-1.5">
               <Label>Priorité</Label>
               <Select value={priorite} onValueChange={(v) => v && setPriorite(v as PrioriteCompetition)}>
@@ -199,9 +201,16 @@ export function CompetitionDialog({
             </div>
           </div>
           {error && <p className="text-destructive text-sm">{error}</p>}
-          <Button onClick={handleSubmit} disabled={isPending} className="self-start">
-            {isPending ? "Enregistrement…" : "Enregistrer"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={handleSubmit} disabled={isPending}>
+              {isPending ? "Enregistrement…" : "Enregistrer"}
+            </Button>
+            {existing && (
+              <Button variant="destructive" onClick={handleDelete} disabled={isPending}>
+                Supprimer
+              </Button>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
