@@ -13,10 +13,7 @@ Application privée de suivi de plans d'entraînement en course à pied. Un coac
 
 - Next.js (App Router, TypeScript strict, React Server Components par défaut, Server Actions pour les mutations)
 - Supabase : Postgres + Auth (identifiant + mot de passe) + Row Level Security
-- Tailwind CSS + shadcn/ui
 - date-fns, timezone Europe/Paris, semaines commençant le lundi
-- Vitest pour les tests unitaires
-- Déploiement cible : Netlify (build Next.js via `@netlify/plugin-nextjs`, déclenché sur push vers `main`)
 
 Pas de state manager global tant que le besoin n'est pas prouvé.
 
@@ -26,50 +23,6 @@ Pas de state manager global tant que le besoin n'est pas prouvé.
 - TypeScript strict, pas de `any`.
 - Commentaires uniquement quand le "pourquoi" n'est pas évident (contrainte cachée, invariant, contournement).
 - Pas d'abstraction ou de gestion d'erreur pour des cas qui ne peuvent pas arriver.
-
-## Structure
-
-```
-app/                    routes (App Router)
-  login/                page + Server Action de connexion (identifiant + mot de passe, coach compris)
-  apres-connexion/      filet de sécurité seulement (voir lib/auth-destination.ts) : aiguille vers /admin ou /mon-plan selon profile.is_admin
-  actions/auth.ts        Server Action de déconnexion
-  admin/                parcours coach, protégé
-    page.tsx             liste des athlètes (volume semaine, dernier RPE, prochaine compét)
-    athletes/[identifiant]/ fiche athlète (zones calculées, perfs, compétitions, notes)
-      calendrier/          vue mois/semaine, drag and drop, ajout (bibliothèque/custom), duplication de semaine
-      seances/[seanceId]/  page fine : charge la séance de CET athlète, délègue à _components/seance-editor.tsx
-    bibliotheque/          liste filtrable (type, recherche titre) des séances est_modele=true
-      [seanceId]/           édition directe d'une séance de bibliothèque (même éditeur, sans athlète/allures réelles)
-    retours/                liste chronologique de tous les retours (100 derniers)
-    _components/seance-editor.tsx  éditeur bloc par bloc partagé (athlète nullable, cf redirectPath/allowSaveAsLibraryCopy)
-    _lib/draft.ts                   type DraftBloc + helpers (brouillon client, jamais persisté tel quel)
-    _lib/seance-actions.ts           saveSeance() : remplace tous les blocs plutôt qu'un diff incrémental
-  mon-plan/              parcours athlète, protégé
-    page.tsx               accueil : séance du jour ou prochaine séance, countdown compét. A, volume de la semaine
-    calendrier/            lecture seule : liste verticale semaine (mobile) / grille mois (desktop, via CSS)
-    seances/[seanceId]/    détail (blocs en clair, allures réelles) + formulaire de retour (3 taps max)
-    _lib/current-athlete.ts résout la session vers la ligne athlete (auth_user_id)
-    _components/bloc-list.tsx rendu lecture seule des blocs, contraste fort / valeurs en grand
-components/ui/          composants shadcn/ui
-lib/
-  paces.ts              calcul des zones d'allure et de FC (Riegel + config des coefficients)
-  volume.ts             calcul du volume (distance/durée) d'une séance à partir de ses blocs
-  mappers.ts             conversion lignes Supabase (snake_case) -> types lib/paces, lib/volume
-  date.ts                nowInParis() : "aujourd'hui" ancré Europe/Paris, jamais new Date() nu
-  labels.ts               labels français pour les enums bruts sans lib dédiée (ex: seance_type)
-  athlete-login.ts         mapping identifiant <-> email interne synthétique pour la connexion par mot de passe
-  auth-destination.ts      résout où rediriger après connexion (/admin ou /mon-plan) selon profile.is_admin
-  paces.test.ts
-  volume.test.ts
-utils/supabase/
-  client.ts              client Supabase navigateur
-  server.ts               client Supabase Server Components / Server Actions
-  middleware.ts           rafraîchissement de session (appelé par proxy.ts racine)
-  admin.ts                 client service_role (auth.admin.*), Server Actions only, jamais côté client
-proxy.ts                 wiring Next.js du rafraîchissement de session Supabase (convention "proxy", ex-middleware.ts)
-supabase/migrations/     migrations SQL (schéma + RLS + seed)
-```
 
 ## Modèle de données — décisions clés
 

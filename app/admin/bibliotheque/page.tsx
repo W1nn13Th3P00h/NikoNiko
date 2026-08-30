@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import { SEANCE_TYPE_LABELS } from "@/lib/labels";
+import { seanceTypeColor } from "@/lib/zone-colors";
 import type { Database } from "@/lib/database.types";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { LibraryFilters } from "./_components/library-filters";
 import { NewSeanceButton } from "./_components/new-seance-button";
+import { DeleteSeanceButton } from "./_components/delete-seance-button";
 
 type SeanceType = Database["public"]["Enums"]["seance_type"];
 
@@ -50,7 +51,7 @@ export default async function BibliothequePage({
           <h1 className="text-2xl font-semibold">Bibliothèque de séances</h1>
           <p className="text-muted-foreground text-sm">
             Se remplit aussi depuis l&apos;éditeur de séance (case &quot;enregistrer aussi dans la
-            bibliothèque&quot;). Clique un titre pour éditer une séance existante.
+            bibliothèque&quot;). Clique une séance pour l&apos;éditer.
           </p>
         </div>
         <NewSeanceButton />
@@ -62,24 +63,42 @@ export default async function BibliothequePage({
         {(seances ?? []).length === 0 ? (
           <p className="text-muted-foreground text-sm">Aucune séance ne correspond.</p>
         ) : (
-          (seances ?? []).map((s) => (
-            <Card key={s.id}>
-              <CardContent className="flex items-center justify-between py-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Link href={`/admin/bibliotheque/${s.id}`} className="font-medium hover:underline">
-                      {s.titre}
-                    </Link>
-                    <Badge variant="secondary">{SEANCE_TYPE_LABELS[s.type]}</Badge>
-                  </div>
-                  {s.objectif && <p className="text-muted-foreground text-sm">{s.objectif}</p>}
-                </div>
-                <span className="text-muted-foreground text-sm">
-                  {countBySeance.get(s.id) ?? 0} bloc(s)
-                </span>
-              </CardContent>
-            </Card>
-          ))
+          (seances ?? []).map((s) => {
+            const color = seanceTypeColor(s.type);
+            return (
+              <Link
+                key={s.id}
+                href={`/admin/bibliotheque/${s.id}`}
+                className="focus-visible:ring-ring/50 block rounded-xl focus-visible:ring-[3px] focus-visible:outline-none"
+              >
+                <Card className="transition-colors hover:bg-accent/50">
+                  <CardContent className="flex items-center justify-between py-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{s.titre}</span>
+                        <span
+                          className="rounded-full px-2 py-0.5 text-xs font-medium"
+                          style={{
+                            backgroundColor: `color-mix(in srgb, ${color} 18%, transparent)`,
+                            color: `color-mix(in srgb, ${color} 70%, black)`,
+                          }}
+                        >
+                          {SEANCE_TYPE_LABELS[s.type]}
+                        </span>
+                      </div>
+                      {s.objectif && <p className="text-muted-foreground text-sm">{s.objectif}</p>}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-muted-foreground text-sm">
+                        {countBySeance.get(s.id) ?? 0} bloc(s)
+                      </span>
+                      <DeleteSeanceButton seanceId={s.id} titre={s.titre} />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })
         )}
       </div>
     </div>

@@ -17,6 +17,7 @@ import {
 } from "@/lib/paces";
 import { SEANCE_TYPE_LABELS } from "@/lib/labels";
 import { ZONE_COLORS, seanceTypeColor } from "@/lib/zone-colors";
+import { deleteSeance } from "@/app/admin/_lib/seance-actions";
 import type { Database } from "@/lib/database.types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +39,6 @@ import {
 import {
   applyLibrarySeance,
   createBlankSeance,
-  deleteSeance,
   duplicateWeek,
   moveSeanceDate,
 } from "../actions";

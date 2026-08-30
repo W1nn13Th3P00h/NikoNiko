@@ -127,13 +127,6 @@ export async function moveSeanceDate(seanceId: string, newDate: string) {
   revalidatePath("/admin", "layout");
 }
 
-export async function deleteSeance(seanceId: string) {
-  const supabase = await createClient();
-  const { error } = await supabase.from("seance").delete().eq("id", seanceId);
-  revalidatePath("/admin", "layout");
-  return { error: error ? error.message : null };
-}
-
 export async function duplicateWeek(
   sourceAthleteId: string,
   sourceWeekStart: string,
