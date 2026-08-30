@@ -5,9 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { addMonths, addWeeks, differenceInCalendarDays, format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
+import { Trash2 } from "lucide-react";
 import { computeSeanceVolume } from "@/lib/volume";
 import { toBlocSeanceInput } from "@/lib/mappers";
 import {
+  formatDurationHMS,
   formatPaceSecondsPerKm,
   resolvePaceZones,
   ZONE_SHORT_LABELS,
@@ -36,11 +38,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { AddNoteButton, NoteChip } from "@/components/calendar-note-dialog";
 import {
   applyLibrarySeance,
   createBlankSeance,
+  createNote,
+  deleteSeance,
+  deleteNote,
   duplicateWeek,
   moveSeanceDate,
+  updateNote,
 } from "../actions";
 
 type SeanceType = Database["public"]["Enums"]["seance_type"];
@@ -68,8 +75,29 @@ interface CompetitionRow {
   id: string;
   nom: string;
   date: string;
+  distance: string;
   objectif_temps_secondes: number | null;
+  resultat_temps_secondes: number | null;
   priorite: Database["public"]["Enums"]["priorite_competition"];
+}
+
+// Distance is free text ("10 km", "Semi-marathon", "Trail 28 km…") — no
+// structured field to sum. Best-effort: the coach's actual convention is to
+// just type the km count (e.g. "15"), so pull a leading number and treat it
+// as km; anything else contributes nothing rather than a wrong guess.
+function competitionDistanceMetres(c: CompetitionRow): number {
+  const match = c.distance.trim().match(/^(\d+(?:[.,]\d+)?)/);
+  if (!match) return 0;
+  return Math.round(parseFloat(match[1].replace(",", ".")) * 1000);
+}
+
+interface NoteRow {
+  id: string;
+  titre: string;
+  couleur: string;
+  contenu: string | null;
+  date_debut: string;
+  date_fin: string;
 }
 
 interface AthleteRef {
@@ -112,6 +140,7 @@ export function CalendarView({
   retours,
   competitions,
   nextCompetition,
+  notes,
   performances,
   zoneOverrides = {},
   view,
@@ -128,6 +157,7 @@ export function CalendarView({
   retours: RetourRow[];
   competitions: CompetitionRow[];
   nextCompetition: { nom: string; date: string; priorite: string } | null;
+  notes: NoteRow[];
   performances: PerformanceReference[];
   zoneOverrides?: ZoneManualOverrides;
   view: "mois" | "semaine";
@@ -149,6 +179,12 @@ export function CalendarView({
   }
 
   const competitionByDay = new Map(competitions.map((c) => [c.date, c]));
+
+  // Spans one or more days — plain string comparison works since dates are
+  // ISO yyyy-MM-dd, which sorts lexicographically same as chronologically.
+  function notesForDay(day: string): NoteRow[] {
+    return notes.filter((n) => n.date_debut <= day && day <= n.date_fin);
+  }
   const retourBySeanceId = new Map(retours.map((r) => [r.seance_id, r]));
   const blocsBySeanceId = new Map<string, BlocRow[]>();
   for (const b of blocs) {
@@ -163,6 +199,7 @@ export function CalendarView({
     const weekSeanceIds = new Set(weekSeances.map((s) => s.id));
     const weekBlocs = blocs.filter((b) => weekSeanceIds.has(b.seance_id)).map(toBlocSeanceInput);
     const volume = computeSeanceVolume(weekBlocs, performances, zoneOverrides);
+    const weekCompetitions = competitions.filter((c) => daySet.has(c.date));
 
     let doneKm = 0;
     let doneCount = 0;
@@ -175,9 +212,30 @@ export function CalendarView({
       }
     }
 
+    // A competition counts toward the week's volume like a séance: its
+    // distance/time (target, or actual result once raced) rolls into the
+    // planned total, and a recorded result rolls into the done total —
+    // there's no retour_seance row to key off since a compétition isn't one.
+    let competitionDistanceMetresTotal = 0;
+    let competitionDureeSecondes = 0;
+    for (const c of weekCompetitions) {
+      const distanceMetres = competitionDistanceMetres(c);
+      competitionDistanceMetresTotal += distanceMetres;
+      competitionDureeSecondes += c.resultat_temps_secondes ?? c.objectif_temps_secondes ?? 0;
+      if (c.resultat_temps_secondes) {
+        doneCount += 1;
+        doneKm += distanceMetres / 1000;
+      }
+    }
+
     return {
-      volume,
-      seanceCount: weekSeances.length,
+      volume: {
+        ...volume,
+        distanceKm:
+          Math.round(((volume.distanceMetres + competitionDistanceMetresTotal) / 1000) * 100) / 100,
+        dureeMinutes: volume.dureeMinutes + Math.round(competitionDureeSecondes / 60),
+      },
+      seanceCount: weekSeances.length + weekCompetitions.length,
       doneKm: Math.round(doneKm * 10) / 10,
       doneCount,
     };
@@ -332,6 +390,7 @@ export function CalendarView({
                 {week.map((day) => {
                   const daySeances = seancesByDay.get(day) ?? [];
                   const competition = competitionByDay.get(day);
+                  const dayNotes = notesForDay(day);
                   const isToday = day === today;
                   const inCurrentMonth =
                     view === "semaine" ||
@@ -341,21 +400,39 @@ export function CalendarView({
                     return (
                       <div
                         key={day}
-                        className="flex flex-col gap-1.5 rounded-[3px] bg-foreground p-2.5 text-background"
-                        style={{ height: density === "compact" ? 44 : 132 }}
+                        className="flex flex-col gap-1.5 overflow-hidden rounded-[3px] bg-foreground p-2.5 text-background"
+                        style={{ minHeight: density === "compact" ? 44 : 132 }}
                       >
                         <span className="font-mono text-[11px] opacity-70">
                           {format(parseISO(day), "d MMM", { locale: fr })}
                         </span>
-                        <span className="text-[11px] font-bold tracking-[0.09em] uppercase">
-                          Compétition
-                        </span>
+                        {dayNotes.map((n) => (
+                          <NoteChip
+                            key={n.id}
+                            note={{
+                              id: n.id,
+                              titre: n.titre,
+                              couleur: n.couleur,
+                              contenu: n.contenu,
+                              dateDebut: n.date_debut,
+                              dateFin: n.date_fin,
+                            }}
+                            athleteId={athlete.id}
+                            onCreate={createNote}
+                            onUpdate={updateNote}
+                            onDelete={deleteNote}
+                            variant="inverted"
+                          />
+                        ))}
+                        {density === "detaille" && (
+                          <span className="text-[11px] font-bold tracking-[0.09em] uppercase">
+                            Compétition
+                          </span>
+                        )}
                         <span className="text-[13px] font-semibold">{competition.nom}</span>
-                        {competition.objectif_temps_secondes && (
+                        {density === "detaille" && competition.objectif_temps_secondes && (
                           <span className="font-mono text-xs opacity-70">
-                            objectif{" "}
-                            {Math.floor(competition.objectif_temps_secondes / 60)}:
-                            {String(competition.objectif_temps_secondes % 60).padStart(2, "0")}
+                            objectif {formatDurationHMS(competition.objectif_temps_secondes)}
                           </span>
                         )}
                       </div>
@@ -371,7 +448,7 @@ export function CalendarView({
                         const seanceId = e.dataTransfer.getData("text/plain");
                         if (seanceId) void handleDrop(seanceId, day);
                       }}
-                      className={`relative flex flex-col gap-1 overflow-hidden rounded-[3px] border bg-card p-2 ${
+                      className={`@container relative flex flex-col gap-1 overflow-hidden rounded-[3px] border bg-card p-2 ${
                         isToday ? "border-foreground" : ""
                       } ${inCurrentMonth ? "" : "opacity-50"}`}
                       style={{ minHeight: density === "compact" ? 44 : 132 }}
@@ -379,6 +456,28 @@ export function CalendarView({
                       <span className="font-mono text-[11px] text-muted-foreground">
                         {format(parseISO(day), "d")}
                       </span>
+
+                      {dayNotes.length > 0 && (
+                        <div className="flex flex-col gap-1">
+                          {dayNotes.map((n) => (
+                            <NoteChip
+                              key={n.id}
+                              note={{
+                                id: n.id,
+                                titre: n.titre,
+                                couleur: n.couleur,
+                                contenu: n.contenu,
+                                dateDebut: n.date_debut,
+                                dateFin: n.date_fin,
+                              }}
+                              athleteId={athlete.id}
+                              onCreate={createNote}
+                              onUpdate={updateNote}
+                              onDelete={deleteNote}
+                            />
+                          ))}
+                        </div>
+                      )}
 
                       {daySeances.length === 0 ? (
                         <span className="text-[13px] font-medium text-[#B4C2C2]">Repos</span>
@@ -419,20 +518,23 @@ export function CalendarView({
                                     style={{ backgroundColor: seanceTypeColor(s.type) }}
                                   />
                                 )}
-                                <div className="flex items-start justify-between gap-1 pr-6">
+                                <div
+                                  className={`flex items-start justify-between gap-1 ${retour?.rpe ? "pr-6" : ""}`}
+                                >
                                   <Link
                                     href={`/admin/athletes/${athlete.identifiant}/seances/${s.id}`}
-                                    className="text-[13px] leading-tight font-semibold hover:underline"
+                                    title={s.titre}
+                                    className="line-clamp-2 min-w-0 flex-1 text-[clamp(11px,8cqw,13px)] leading-tight font-semibold break-words hover:underline"
                                   >
                                     {s.titre}
                                   </Link>
                                   <button
                                     type="button"
                                     onClick={() => void handleDelete(s.id, s.titre)}
-                                    className="flex size-5 items-center justify-center text-muted-foreground"
+                                    className="flex size-5 shrink-0 items-center justify-center rounded-[3px] text-red-500 hover:bg-red-500/10 hover:text-red-600"
                                     aria-label={`Supprimer ${s.titre}`}
                                   >
-                                    ×
+                                    <Trash2 className="size-3.5" />
                                   </button>
                                 </div>
                                 {density === "detaille" && (
@@ -451,13 +553,22 @@ export function CalendarView({
                       )}
 
                       {density === "detaille" && (
-                        <button
-                          type="button"
-                          onClick={() => setAddDialogDate(day)}
-                          className="mt-auto text-left text-[11px] text-muted-foreground hover:underline"
-                        >
-                          + Ajouter
-                        </button>
+                        <div className="mt-auto flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setAddDialogDate(day)}
+                            className="text-left text-[11px] text-muted-foreground hover:underline"
+                          >
+                            + Ajouter
+                          </button>
+                          <AddNoteButton
+                            day={day}
+                            athleteId={athlete.id}
+                            onCreate={createNote}
+                            onUpdate={updateNote}
+                            onDelete={deleteNote}
+                          />
+                        </div>
                       )}
                     </div>
                   );
