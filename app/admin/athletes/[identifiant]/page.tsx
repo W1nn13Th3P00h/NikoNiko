@@ -289,7 +289,7 @@ export default async function AthleteDetailPage({
                         date: c.date,
                         lieu: c.lieu,
                         distance: c.distance,
-                        distanceMetresCustom: c.distance_metres_custom,
+                        deniveleMetresDplus: c.denivele_metres_dplus,
                         objectifTempsSecondes: c.objectif_temps_secondes,
                         objectifTexte: c.objectif_texte,
                         priorite: c.priorite,

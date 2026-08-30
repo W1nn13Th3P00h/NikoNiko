@@ -98,17 +98,15 @@ export async function createCompetition(
     nom: string;
     date: string;
     lieu: string | null;
-    distance: DistanceRef | null;
-    distanceMetresCustom: number | null;
+    distance: string;
+    deniveleMetresDplus: number | null;
     objectifTempsSecondes: number | null;
     objectifTexte: string | null;
     priorite: PrioriteCompetition;
   }
 ): Promise<{ error?: string }> {
   if (!data.nom.trim()) return { error: "Nom requis." };
-  if (!data.distance && !data.distanceMetresCustom) {
-    return { error: "Distance requise (standard ou personnalisée)." };
-  }
+  if (!data.distance.trim()) return { error: "Distance requise." };
 
   const supabase = await createClient();
   const { error } = await supabase.from("competition").insert({
@@ -116,8 +114,8 @@ export async function createCompetition(
     nom: data.nom.trim(),
     date: data.date,
     lieu: data.lieu,
-    distance: data.distance,
-    distance_metres_custom: data.distanceMetresCustom,
+    distance: data.distance.trim(),
+    denivele_metres_dplus: data.deniveleMetresDplus,
     objectif_temps_secondes: data.objectifTempsSecondes,
     objectif_texte: data.objectifTexte,
     priorite: data.priorite,
@@ -135,17 +133,15 @@ export async function updateCompetition(
     nom: string;
     date: string;
     lieu: string | null;
-    distance: DistanceRef | null;
-    distanceMetresCustom: number | null;
+    distance: string;
+    deniveleMetresDplus: number | null;
     objectifTempsSecondes: number | null;
     objectifTexte: string | null;
     priorite: PrioriteCompetition;
   }
 ): Promise<{ error?: string }> {
   if (!data.nom.trim()) return { error: "Nom requis." };
-  if (!data.distance && !data.distanceMetresCustom) {
-    return { error: "Distance requise (standard ou personnalisée)." };
-  }
+  if (!data.distance.trim()) return { error: "Distance requise." };
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -154,8 +150,8 @@ export async function updateCompetition(
       nom: data.nom.trim(),
       date: data.date,
       lieu: data.lieu,
-      distance: data.distance,
-      distance_metres_custom: data.distanceMetresCustom,
+      distance: data.distance.trim(),
+      denivele_metres_dplus: data.deniveleMetresDplus,
       objectif_temps_secondes: data.objectifTempsSecondes,
       objectif_texte: data.objectifTexte,
       priorite: data.priorite,

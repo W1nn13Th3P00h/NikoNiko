@@ -70,8 +70,20 @@ interface CompetitionRow {
   id: string;
   nom: string;
   date: string;
+  distance: string;
   objectif_temps_secondes: number | null;
+  resultat_temps_secondes: number | null;
   priorite: Database["public"]["Enums"]["priorite_competition"];
+}
+
+// Distance is free text ("10 km", "Semi-marathon", "Trail 28 km…") — no
+// structured field to sum. Best-effort: the coach's actual convention is to
+// just type the km count (e.g. "15"), so pull a leading number and treat it
+// as km; anything else contributes nothing rather than a wrong guess.
+function competitionDistanceMetres(c: CompetitionRow): number {
+  const match = c.distance.trim().match(/^(\d+(?:[.,]\d+)?)/);
+  if (!match) return 0;
+  return Math.round(parseFloat(match[1].replace(",", ".")) * 1000);
 }
 
 interface AthleteRef {
@@ -165,6 +177,7 @@ export function CalendarView({
     const weekSeanceIds = new Set(weekSeances.map((s) => s.id));
     const weekBlocs = blocs.filter((b) => weekSeanceIds.has(b.seance_id)).map(toBlocSeanceInput);
     const volume = computeSeanceVolume(weekBlocs, performances, zoneOverrides);
+    const weekCompetitions = competitions.filter((c) => daySet.has(c.date));
 
     let doneKm = 0;
     let doneCount = 0;
@@ -177,9 +190,30 @@ export function CalendarView({
       }
     }
 
+    // A competition counts toward the week's volume like a séance: its
+    // distance/time (target, or actual result once raced) rolls into the
+    // planned total, and a recorded result rolls into the done total —
+    // there's no retour_seance row to key off since a compétition isn't one.
+    let competitionDistanceMetresTotal = 0;
+    let competitionDureeSecondes = 0;
+    for (const c of weekCompetitions) {
+      const distanceMetres = competitionDistanceMetres(c);
+      competitionDistanceMetresTotal += distanceMetres;
+      competitionDureeSecondes += c.resultat_temps_secondes ?? c.objectif_temps_secondes ?? 0;
+      if (c.resultat_temps_secondes) {
+        doneCount += 1;
+        doneKm += distanceMetres / 1000;
+      }
+    }
+
     return {
-      volume,
-      seanceCount: weekSeances.length,
+      volume: {
+        ...volume,
+        distanceKm:
+          Math.round(((volume.distanceMetres + competitionDistanceMetresTotal) / 1000) * 100) / 100,
+        dureeMinutes: volume.dureeMinutes + Math.round(competitionDureeSecondes / 60),
+      },
+      seanceCount: weekSeances.length + weekCompetitions.length,
       doneKm: Math.round(doneKm * 10) / 10,
       doneCount,
     };

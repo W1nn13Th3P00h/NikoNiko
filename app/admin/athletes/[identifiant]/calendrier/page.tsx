@@ -66,7 +66,7 @@ export default async function AthleteCalendarPage({
       .eq("athlete_id", athlete.id),
     supabase
       .from("competition")
-      .select("id, nom, date, objectif_temps_secondes, priorite")
+      .select("id, nom, date, distance, objectif_temps_secondes, resultat_temps_secondes, priorite")
       .eq("athlete_id", athlete.id)
       .gte("date", gridStartStr)
       .lte("date", gridEndStr),
