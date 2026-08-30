@@ -9,6 +9,8 @@ import { nowInParis } from "@/lib/date";
 import { toBlocSeanceInput, toPerformanceReference, toZoneManualOverrides } from "@/lib/mappers";
 import { computeSeanceVolume } from "@/lib/volume";
 import { SEANCE_TYPE_LABELS } from "@/lib/labels";
+import { AddNoteButton, NoteChip } from "@/components/calendar-note-dialog";
+import { createNote, deleteNote, updateNote } from "./actions";
 
 export default async function AthleteCalendarPage({
   searchParams,
@@ -28,24 +30,31 @@ export default async function AthleteCalendarPage({
   const gridStart = format(monthWeeks[0][0], "yyyy-MM-dd");
   const gridEnd = format(monthWeeks[monthWeeks.length - 1][6], "yyyy-MM-dd");
 
-  const [{ data: seances }, { data: performanceRows }, { data: zoneManuelleRows }] = await Promise.all([
-    supabase
-      .from("seance")
-      .select("id, titre, type, date_prevue")
-      .eq("athlete_id", athlete.id)
-      .eq("est_modele", false)
-      .gte("date_prevue", gridStart)
-      .lte("date_prevue", gridEnd)
-      .order("ordre_dans_journee"),
-    supabase
-      .from("performance_reference")
-      .select("distance, temps_secondes, date_perf, type")
-      .eq("athlete_id", athlete.id),
-    supabase
-      .from("zone_manuelle")
-      .select("zone, allure_min_secondes_par_km, allure_max_secondes_par_km, fc_min_bpm, fc_max_bpm")
-      .eq("athlete_id", athlete.id),
-  ]);
+  const [{ data: seances }, { data: performanceRows }, { data: zoneManuelleRows }, { data: notes }] =
+    await Promise.all([
+      supabase
+        .from("seance")
+        .select("id, titre, type, date_prevue")
+        .eq("athlete_id", athlete.id)
+        .eq("est_modele", false)
+        .gte("date_prevue", gridStart)
+        .lte("date_prevue", gridEnd)
+        .order("ordre_dans_journee"),
+      supabase
+        .from("performance_reference")
+        .select("distance, temps_secondes, date_perf, type")
+        .eq("athlete_id", athlete.id),
+      supabase
+        .from("zone_manuelle")
+        .select("zone, allure_min_secondes_par_km, allure_max_secondes_par_km, fc_min_bpm, fc_max_bpm")
+        .eq("athlete_id", athlete.id),
+      supabase
+        .from("note_calendrier")
+        .select("id, titre, couleur, contenu, date_debut, date_fin")
+        .eq("athlete_id", athlete.id)
+        .lte("date_debut", gridEnd)
+        .gte("date_fin", gridStart),
+    ]);
 
   const seanceIds = (seances ?? []).map((s) => s.id);
   const [{ data: blocs }, { data: retours }] = await Promise.all([
@@ -79,10 +88,17 @@ export default async function AthleteCalendarPage({
   const prevMonthHref = `?date=${format(addMonths(referenceDate, -1), "yyyy-MM-dd")}`;
   const nextMonthHref = `?date=${format(addMonths(referenceDate, 1), "yyyy-MM-dd")}`;
 
+  // Spans one or more days — plain string comparison works since dates are
+  // ISO yyyy-MM-dd, which sorts lexicographically same as chronologically.
+  function notesForDay(dayStr: string) {
+    return (notes ?? []).filter((n) => n.date_debut <= dayStr && dayStr <= n.date_fin);
+  }
+
   function daySummary(day: Date) {
     const dayStr = format(day, "yyyy-MM-dd");
     const daySeances = seancesByDay.get(dayStr) ?? [];
-    return { dayStr, daySeances };
+    const dayNotes = notesForDay(dayStr);
+    return { dayStr, daySeances, dayNotes };
   }
 
   const STATUT_GLYPH: Record<string, string> = { fait: "✓", partiel: "◐", non_fait: "✗" };
@@ -107,15 +123,47 @@ export default async function AthleteCalendarPage({
         </div>
 
         {weekDays.map((day) => {
-          const { dayStr, daySeances } = daySummary(day);
+          const { dayStr, daySeances, dayNotes } = daySummary(day);
           return (
             <div
               key={dayStr}
               className={`rounded-lg border p-3 ${dayStr === today ? "border-primary" : ""}`}
             >
-              <p className="text-muted-foreground text-xs font-medium capitalize">
-                {format(day, "EEEE dd MMMM", { locale: fr })}
-              </p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-muted-foreground text-xs font-medium capitalize">
+                  {format(day, "EEEE dd MMMM", { locale: fr })}
+                </p>
+                <AddNoteButton
+                  day={dayStr}
+                  athleteId={athlete.id}
+                  onCreate={createNote}
+                  onUpdate={updateNote}
+                  onDelete={deleteNote}
+                  label="+ note"
+                  className="text-xs text-muted-foreground underline"
+                />
+              </div>
+              {dayNotes.length > 0 && (
+                <div className="mt-1 flex flex-col gap-1">
+                  {dayNotes.map((n) => (
+                    <NoteChip
+                      key={n.id}
+                      note={{
+                        id: n.id,
+                        titre: n.titre,
+                        couleur: n.couleur,
+                        contenu: n.contenu,
+                        dateDebut: n.date_debut,
+                        dateFin: n.date_fin,
+                      }}
+                      athleteId={athlete.id}
+                      onCreate={createNote}
+                      onUpdate={updateNote}
+                      onDelete={deleteNote}
+                    />
+                  ))}
+                </div>
+              )}
               {daySeances.length === 0 ? (
                 <p className="text-muted-foreground text-sm">Repos</p>
               ) : (
@@ -164,7 +212,7 @@ export default async function AthleteCalendarPage({
         {monthWeeks.map((week) => (
           <div key={format(week[0], "yyyy-MM-dd")} className="grid grid-cols-7 gap-2">
             {week.map((day) => {
-              const { dayStr, daySeances } = daySummary(day);
+              const { dayStr, daySeances, dayNotes } = daySummary(day);
               const inCurrentMonth = format(day, "yyyy-MM") === format(referenceDate, "yyyy-MM");
               return (
                 <div
@@ -173,7 +221,35 @@ export default async function AthleteCalendarPage({
                     dayStr === today ? "border-primary" : ""
                   } ${inCurrentMonth ? "" : "opacity-50"}`}
                 >
-                  <p className="text-muted-foreground text-xs">{format(day, "dd/MM")}</p>
+                  <div className="flex items-center justify-between gap-1">
+                    <p className="text-muted-foreground text-xs">{format(day, "dd/MM")}</p>
+                    <AddNoteButton
+                      day={dayStr}
+                      athleteId={athlete.id}
+                      onCreate={createNote}
+                      onUpdate={updateNote}
+                      onDelete={deleteNote}
+                      label="+"
+                      className="text-xs text-muted-foreground"
+                    />
+                  </div>
+                  {dayNotes.map((n) => (
+                    <NoteChip
+                      key={n.id}
+                      note={{
+                        id: n.id,
+                        titre: n.titre,
+                        couleur: n.couleur,
+                        contenu: n.contenu,
+                        dateDebut: n.date_debut,
+                        dateFin: n.date_fin,
+                      }}
+                      athleteId={athlete.id}
+                      onCreate={createNote}
+                      onUpdate={updateNote}
+                      onDelete={deleteNote}
+                    />
+                  ))}
                   {daySeances.map((s) => {
                     const statut = retourBySeanceId.get(s.id);
                     return (

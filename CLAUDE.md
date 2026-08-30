@@ -47,11 +47,12 @@ app/                    routes (App Router)
     _lib/seance-actions.ts           saveSeance() : remplace tous les blocs plutôt qu'un diff incrémental
   mon-plan/              parcours athlète, protégé
     page.tsx               accueil : séance du jour ou prochaine séance, countdown compét. A, volume de la semaine
-    calendrier/            lecture seule : liste verticale semaine (mobile) / grille mois (desktop, via CSS)
+    calendrier/            lecture seule pour les séances (liste verticale semaine mobile / grille mois desktop via CSS) ; les notes de calendrier, elles, sont éditables ici (voir note_calendrier ci-dessous)
     seances/[seanceId]/    détail (blocs en clair, allures réelles) + formulaire de retour (3 taps max)
     _lib/current-athlete.ts résout la session vers la ligne athlete (auth_user_id)
     _components/bloc-list.tsx rendu lecture seule des blocs, contraste fort / valeurs en grand
 components/ui/          composants shadcn/ui
+components/calendar-note-dialog.tsx  NoteDialog/NoteChip/AddNoteButton — partagés entre le calendrier admin et /mon-plan/calendrier, actions passées en props (le composant ignore lequel des deux actions.ts les fournit)
 lib/
   paces.ts              calcul des zones d'allure et de FC (Riegel + config des coefficients)
   volume.ts             calcul du volume (distance/durée) d'une séance à partir de ses blocs
@@ -82,6 +83,7 @@ supabase/migrations/     migrations SQL (schéma + RLS + seed)
 - **Volume d'une séance** : calculé automatiquement depuis les blocs (distance totale estimée en km, durée totale en minutes), avec conversion temps ↔ distance dans les deux sens via l'allure cible de l'athlète (milieu de la zone visée). Logique isolée dans `lib/volume.ts`. Un flag `estimationComplete` redescend à `false` quand un bloc visait une zone d'allure/FC mais que l'athlète n'a aucune performance de référence — pas quand la cible est `libre`/`rpe`, ce qui est un cas normal.
 - **Sélection de la performance de référence** (`lib/paces.ts`) : parmi les performances `reel`, on prend d'abord la distance la plus fiable disponible (5k/10k > semi > marathon), puis la plus récente à fiabilité égale. Un marathon récent ne prime donc pas sur un 10k plus ancien mais plus fiable — la fiche athlète affiche la performance retenue pour que ce soit vérifiable en un coup d'œil.
 - **Zones manuelles** (`zone_manuelle`) : le coach peut surcharger, zone par zone, la valeur calculée (allure et/ou FC indépendamment) — pour les athlètes sans performance de référence exploitable, ou trop novices pour que l'estimation Riegel ait un sens. Une ligne par `(athlete_id, zone)` réellement saisie ; les zones non surchargées retombent sur le calcul automatique. `lib/paces.ts` expose `resolvePaceZones`/`resolveHeartRateZones` (fusion override + calcul, avec un flag `isManual`) et `getAthletePaceZone` accepte les overrides en 3e paramètre — toutes les fonctions qui consomment une zone réelle (volume, aperçu séance, vue athlète) les propagent en plus des performances.
+- **`note_calendrier`** : annotation libre (titre, couleur, texte optionnel) sur un ou plusieurs jours consécutifs (`date_debut`/`date_fin`), distincte de `athlete_note` (un unique bloc de texte coach-only sur la fiche athlète). Affichée identiquement des deux côtés (titre + couleur, cliquable pour éditer) via le composant partagé `components/calendar-note-dialog.tsx`. C'est la seule autre table, avec `retour_seance`, où l'athlète a un accès en écriture (voir Sécurité) — ici sans aucune restriction (le coach comme l'athlète créent/modifient/suppriment librement leurs propres notes).
 
 ## Sécurité
 
@@ -91,7 +93,7 @@ supabase/migrations/     migrations SQL (schéma + RLS + seed)
   - Comptes créés/modifiés via `auth.admin.createUser`/`updateUserById` (`utils/supabase/admin.ts`, clé service_role, jamais exposée au client, jamais importée hors des Server Actions qui en ont besoin).
   - Un athlete_id ne pointe que vers UN auth_user_id : configurer l'identifiant sur un athlète déjà lié à un compte crée un nouveau compte et re-pointe le lien plutôt que d'écraser l'ancien en place (`setAthleteCredentials` vérifie si le compte lié est déjà un compte "interne" avant de décider update vs create).
   - Pas de réinitialisation de mot de passe en self-service (aucun email envoyé) : le coach réinitialise le code d'un athlète depuis sa fiche ; pour son propre compte, il faut passer par le dashboard Supabase (Authentication → Users) ou une intervention manuelle côté service_role.
-- RLS Postgres : un athlète ne voit que ses propres données, et ne peut écrire que dans `retour_seance` sur ses propres séances (occurrences, pas modèles).
+- RLS Postgres : un athlète ne voit que ses propres données, et ne peut écrire que dans `retour_seance` (sur ses propres séances, occurrences pas modèles) et `note_calendrier` (sans restriction sur ses propres notes).
 - Rôle admin porté par un champ sur le profil, pas par une liste d'emails en dur.
 - Policies RLS écrites explicitement et commentées dans les migrations.
 - Persistance de session : gérée nativement par les cookies `@supabase/ssr` (refresh token, pas d'expiration forcée côté projet) — aucun code custom nécessaire. Un test qui semble "se déconnecter tout seul" est probablement fait en navigation privée.

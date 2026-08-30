@@ -45,6 +45,7 @@ export default async function AthleteCalendarPage({
     { data: zoneManuelleRows },
     { data: gridCompetitions },
     { data: nextCompetition },
+    { data: gridNotes },
   ] = await Promise.all([
     supabase.from("athlete").select("id, prenom, nom, identifiant").eq("actif", true).order("nom"),
     supabase.from("seance").select("id, titre, type").eq("est_modele", true).order("titre"),
@@ -78,6 +79,12 @@ export default async function AthleteCalendarPage({
       .order("date")
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from("note_calendrier")
+      .select("id, titre, couleur, contenu, date_debut, date_fin")
+      .eq("athlete_id", athlete.id)
+      .lte("date_debut", gridEndStr)
+      .gte("date_fin", gridStartStr),
   ]);
 
   const seanceIds = (gridSeances ?? []).map((s) => s.id);
@@ -104,6 +111,7 @@ export default async function AthleteCalendarPage({
       retours={retours ?? []}
       competitions={gridCompetitions ?? []}
       nextCompetition={nextCompetition ?? null}
+      notes={gridNotes ?? []}
       performances={(performanceRows ?? []).map(toPerformanceReference)}
       zoneOverrides={toZoneManualOverrides(zoneManuelleRows ?? [])}
       view={view}

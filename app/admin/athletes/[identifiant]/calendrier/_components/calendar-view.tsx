@@ -37,12 +37,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { AddNoteButton, NoteChip } from "@/components/calendar-note-dialog";
 import {
   applyLibrarySeance,
   createBlankSeance,
+  createNote,
   deleteSeance,
+  deleteNote,
   duplicateWeek,
   moveSeanceDate,
+  updateNote,
 } from "../actions";
 
 type SeanceType = Database["public"]["Enums"]["seance_type"];
@@ -86,6 +90,15 @@ function competitionDistanceMetres(c: CompetitionRow): number {
   return Math.round(parseFloat(match[1].replace(",", ".")) * 1000);
 }
 
+interface NoteRow {
+  id: string;
+  titre: string;
+  couleur: string;
+  contenu: string | null;
+  date_debut: string;
+  date_fin: string;
+}
+
 interface AthleteRef {
   id: string;
   prenom: string;
@@ -126,6 +139,7 @@ export function CalendarView({
   retours,
   competitions,
   nextCompetition,
+  notes,
   performances,
   zoneOverrides = {},
   view,
@@ -142,6 +156,7 @@ export function CalendarView({
   retours: RetourRow[];
   competitions: CompetitionRow[];
   nextCompetition: { nom: string; date: string; priorite: string } | null;
+  notes: NoteRow[];
   performances: PerformanceReference[];
   zoneOverrides?: ZoneManualOverrides;
   view: "mois" | "semaine";
@@ -163,6 +178,12 @@ export function CalendarView({
   }
 
   const competitionByDay = new Map(competitions.map((c) => [c.date, c]));
+
+  // Spans one or more days — plain string comparison works since dates are
+  // ISO yyyy-MM-dd, which sorts lexicographically same as chronologically.
+  function notesForDay(day: string): NoteRow[] {
+    return notes.filter((n) => n.date_debut <= day && day <= n.date_fin);
+  }
   const retourBySeanceId = new Map(retours.map((r) => [r.seance_id, r]));
   const blocsBySeanceId = new Map<string, BlocRow[]>();
   for (const b of blocs) {
@@ -368,6 +389,7 @@ export function CalendarView({
                 {week.map((day) => {
                   const daySeances = seancesByDay.get(day) ?? [];
                   const competition = competitionByDay.get(day);
+                  const dayNotes = notesForDay(day);
                   const isToday = day === today;
                   const inCurrentMonth =
                     view === "semaine" ||
@@ -383,6 +405,24 @@ export function CalendarView({
                         <span className="font-mono text-[11px] opacity-70">
                           {format(parseISO(day), "d MMM", { locale: fr })}
                         </span>
+                        {dayNotes.map((n) => (
+                          <NoteChip
+                            key={n.id}
+                            note={{
+                              id: n.id,
+                              titre: n.titre,
+                              couleur: n.couleur,
+                              contenu: n.contenu,
+                              dateDebut: n.date_debut,
+                              dateFin: n.date_fin,
+                            }}
+                            athleteId={athlete.id}
+                            onCreate={createNote}
+                            onUpdate={updateNote}
+                            onDelete={deleteNote}
+                            variant="inverted"
+                          />
+                        ))}
                         {density === "detaille" && (
                           <span className="text-[11px] font-bold tracking-[0.09em] uppercase">
                             Compétition
@@ -415,6 +455,28 @@ export function CalendarView({
                       <span className="font-mono text-[11px] text-muted-foreground">
                         {format(parseISO(day), "d")}
                       </span>
+
+                      {dayNotes.length > 0 && (
+                        <div className="flex flex-col gap-1">
+                          {dayNotes.map((n) => (
+                            <NoteChip
+                              key={n.id}
+                              note={{
+                                id: n.id,
+                                titre: n.titre,
+                                couleur: n.couleur,
+                                contenu: n.contenu,
+                                dateDebut: n.date_debut,
+                                dateFin: n.date_fin,
+                              }}
+                              athleteId={athlete.id}
+                              onCreate={createNote}
+                              onUpdate={updateNote}
+                              onDelete={deleteNote}
+                            />
+                          ))}
+                        </div>
+                      )}
 
                       {daySeances.length === 0 ? (
                         <span className="text-[13px] font-medium text-[#B4C2C2]">Repos</span>
@@ -490,13 +552,22 @@ export function CalendarView({
                       )}
 
                       {density === "detaille" && (
-                        <button
-                          type="button"
-                          onClick={() => setAddDialogDate(day)}
-                          className="mt-auto text-left text-[11px] text-muted-foreground hover:underline"
-                        >
-                          + Ajouter
-                        </button>
+                        <div className="mt-auto flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setAddDialogDate(day)}
+                            className="text-left text-[11px] text-muted-foreground hover:underline"
+                          >
+                            + Ajouter
+                          </button>
+                          <AddNoteButton
+                            day={day}
+                            athleteId={athlete.id}
+                            onCreate={createNote}
+                            onUpdate={updateNote}
+                            onDelete={deleteNote}
+                          />
+                        </div>
                       )}
                     </div>
                   );

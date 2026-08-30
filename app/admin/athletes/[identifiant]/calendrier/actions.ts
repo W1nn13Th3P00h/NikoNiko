@@ -134,6 +134,56 @@ export async function deleteSeance(seanceId: string) {
   return { error: error ? error.message : null };
 }
 
+export async function createNote(
+  athleteId: string,
+  data: { titre: string; couleur: string; contenu: string | null; dateDebut: string; dateFin: string }
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("note_calendrier").insert({
+    athlete_id: athleteId,
+    titre: data.titre,
+    couleur: data.couleur,
+    contenu: data.contenu,
+    date_debut: data.dateDebut,
+    date_fin: data.dateFin,
+  });
+
+  if (error) return { error: error.message };
+  revalidatePath("/admin", "layout");
+  return {};
+}
+
+export async function updateNote(
+  noteId: string,
+  athleteId: string,
+  data: { titre: string; couleur: string; contenu: string | null; dateDebut: string; dateFin: string }
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("note_calendrier")
+    .update({
+      titre: data.titre,
+      couleur: data.couleur,
+      contenu: data.contenu,
+      date_debut: data.dateDebut,
+      date_fin: data.dateFin,
+    })
+    .eq("id", noteId);
+
+  if (error) return { error: error.message };
+  revalidatePath("/admin", "layout");
+  return {};
+}
+
+export async function deleteNote(noteId: string, athleteId: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("note_calendrier").delete().eq("id", noteId);
+
+  if (error) return { error: error.message };
+  revalidatePath("/admin", "layout");
+  return {};
+}
+
 export async function duplicateWeek(
   sourceAthleteId: string,
   sourceWeekStart: string,

@@ -229,6 +229,47 @@ export type Database = {
           },
         ]
       }
+      note_calendrier: {
+        Row: {
+          athlete_id: string
+          contenu: string | null
+          couleur: string
+          created_at: string
+          date_debut: string
+          date_fin: string
+          id: string
+          titre: string
+        }
+        Insert: {
+          athlete_id: string
+          contenu?: string | null
+          couleur: string
+          created_at?: string
+          date_debut: string
+          date_fin: string
+          id?: string
+          titre: string
+        }
+        Update: {
+          athlete_id?: string
+          contenu?: string | null
+          couleur?: string
+          created_at?: string
+          date_debut?: string
+          date_fin?: string
+          id?: string
+          titre?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "note_calendrier_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "athlete"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       performance_reference: {
         Row: {
           athlete_id: string
