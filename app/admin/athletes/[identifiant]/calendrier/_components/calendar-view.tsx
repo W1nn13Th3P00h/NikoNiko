@@ -429,6 +429,9 @@ export function CalendarView({
                           </span>
                         )}
                         <span className="text-[13px] font-semibold">{competition.nom}</span>
+                        {density === "detaille" && (
+                          <span className="font-mono text-xs opacity-70">{competition.distance}</span>
+                        )}
                         {density === "detaille" && competition.objectif_temps_secondes && (
                           <span className="font-mono text-xs opacity-70">
                             objectif {formatDurationHMS(competition.objectif_temps_secondes)}
@@ -543,6 +546,8 @@ export function CalendarView({
                                       : retour?.distance_reelle_metres
                                         ? `${(retour.distance_reelle_metres / 1000).toFixed(1)} / ${volumeSeance.distanceKm} km`
                                         : `${volumeSeance.distanceKm} km`}
+                                    {" · "}
+                                    {formatDurationHM(volumeSeance.dureeMinutes)}
                                   </span>
                                 )}
                               </div>
