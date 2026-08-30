@@ -10,6 +10,12 @@ import { toBlocSeanceInput, toPerformanceReference, toZoneManualOverrides } from
 import { computeSeanceVolume } from "@/lib/volume";
 import { SEANCE_TYPE_LABELS } from "@/lib/labels";
 import { AddNoteButton, NoteChip } from "@/components/calendar-note-dialog";
+import {
+  CompetitionCardBody,
+  SeanceRpeBadge,
+  SeanceTypeBar,
+  SeanceVolumeLine,
+} from "./_components/seance-info";
 import { createNote, deleteNote, updateNote } from "./actions";
 
 export default async function AthleteCalendarPage({
@@ -30,31 +36,42 @@ export default async function AthleteCalendarPage({
   const gridStart = format(monthWeeks[0][0], "yyyy-MM-dd");
   const gridEnd = format(monthWeeks[monthWeeks.length - 1][6], "yyyy-MM-dd");
 
-  const [{ data: seances }, { data: performanceRows }, { data: zoneManuelleRows }, { data: notes }] =
-    await Promise.all([
-      supabase
-        .from("seance")
-        .select("id, titre, type, date_prevue")
-        .eq("athlete_id", athlete.id)
-        .eq("est_modele", false)
-        .gte("date_prevue", gridStart)
-        .lte("date_prevue", gridEnd)
-        .order("ordre_dans_journee"),
-      supabase
-        .from("performance_reference")
-        .select("distance, temps_secondes, date_perf, type")
-        .eq("athlete_id", athlete.id),
-      supabase
-        .from("zone_manuelle")
-        .select("zone, allure_min_secondes_par_km, allure_max_secondes_par_km, fc_min_bpm, fc_max_bpm")
-        .eq("athlete_id", athlete.id),
-      supabase
-        .from("note_calendrier")
-        .select("id, titre, couleur, contenu, date_debut, date_fin")
-        .eq("athlete_id", athlete.id)
-        .lte("date_debut", gridEnd)
-        .gte("date_fin", gridStart),
-    ]);
+  const [
+    { data: seances },
+    { data: performanceRows },
+    { data: zoneManuelleRows },
+    { data: notes },
+    { data: competitions },
+  ] = await Promise.all([
+    supabase
+      .from("seance")
+      .select("id, titre, type, date_prevue")
+      .eq("athlete_id", athlete.id)
+      .eq("est_modele", false)
+      .gte("date_prevue", gridStart)
+      .lte("date_prevue", gridEnd)
+      .order("ordre_dans_journee"),
+    supabase
+      .from("performance_reference")
+      .select("distance, temps_secondes, date_perf, type")
+      .eq("athlete_id", athlete.id),
+    supabase
+      .from("zone_manuelle")
+      .select("zone, allure_min_secondes_par_km, allure_max_secondes_par_km, fc_min_bpm, fc_max_bpm")
+      .eq("athlete_id", athlete.id),
+    supabase
+      .from("note_calendrier")
+      .select("id, titre, couleur, contenu, date_debut, date_fin")
+      .eq("athlete_id", athlete.id)
+      .lte("date_debut", gridEnd)
+      .gte("date_fin", gridStart),
+    supabase
+      .from("competition")
+      .select("id, nom, date, distance, objectif_temps_secondes")
+      .eq("athlete_id", athlete.id)
+      .gte("date", gridStart)
+      .lte("date", gridEnd),
+  ]);
 
   const seanceIds = (seances ?? []).map((s) => s.id);
   const [{ data: blocs }, { data: retours }] = await Promise.all([
@@ -62,13 +79,17 @@ export default async function AthleteCalendarPage({
       ? supabase.from("bloc_seance").select("*").in("seance_id", seanceIds)
       : Promise.resolve({ data: [] }),
     seanceIds.length > 0
-      ? supabase.from("retour_seance").select("seance_id, statut").in("seance_id", seanceIds)
+      ? supabase
+          .from("retour_seance")
+          .select("seance_id, statut, rpe, distance_reelle_metres")
+          .in("seance_id", seanceIds)
       : Promise.resolve({ data: [] }),
   ]);
 
   const performances = (performanceRows ?? []).map(toPerformanceReference);
   const zoneOverrides = toZoneManualOverrides(zoneManuelleRows ?? []);
-  const retourBySeanceId = new Map((retours ?? []).map((r) => [r.seance_id, r.statut]));
+  const retourBySeanceId = new Map((retours ?? []).map((r) => [r.seance_id, r]));
+  const competitionByDay = new Map((competitions ?? []).map((c) => [c.date, c]));
   const blocsBySeanceId = new Map<string, typeof blocs>();
   for (const b of blocs ?? []) {
     const list = blocsBySeanceId.get(b.seance_id) ?? [];
@@ -98,7 +119,8 @@ export default async function AthleteCalendarPage({
     const dayStr = format(day, "yyyy-MM-dd");
     const daySeances = seancesByDay.get(dayStr) ?? [];
     const dayNotes = notesForDay(dayStr);
-    return { dayStr, daySeances, dayNotes };
+    const competition = competitionByDay.get(dayStr);
+    return { dayStr, daySeances, dayNotes, competition };
   }
 
   const STATUT_GLYPH: Record<string, string> = { fait: "✓", partiel: "◐", non_fait: "✗" };
@@ -123,14 +145,16 @@ export default async function AthleteCalendarPage({
         </div>
 
         {weekDays.map((day) => {
-          const { dayStr, daySeances, dayNotes } = daySummary(day);
+          const { dayStr, daySeances, dayNotes, competition } = daySummary(day);
           return (
             <div
               key={dayStr}
-              className={`rounded-lg border p-3 ${dayStr === today ? "border-primary" : ""}`}
+              className={`rounded-lg border p-3 ${dayStr === today ? "border-primary" : ""} ${
+                competition ? "bg-foreground text-background" : ""
+              }`}
             >
               <div className="flex items-center justify-between gap-2">
-                <p className="text-muted-foreground text-xs font-medium capitalize">
+                <p className="text-xs font-medium capitalize opacity-70">
                   {format(day, "EEEE dd MMMM", { locale: fr })}
                 </p>
                 <AddNoteButton
@@ -140,7 +164,7 @@ export default async function AthleteCalendarPage({
                   onUpdate={updateNote}
                   onDelete={deleteNote}
                   label="+ note"
-                  className="text-xs text-muted-foreground underline"
+                  className={`text-xs underline ${competition ? "opacity-70" : "text-muted-foreground"}`}
                 />
               </div>
               {dayNotes.length > 0 && (
@@ -160,29 +184,38 @@ export default async function AthleteCalendarPage({
                       onCreate={createNote}
                       onUpdate={updateNote}
                       onDelete={deleteNote}
+                      variant={competition ? "inverted" : undefined}
                     />
                   ))}
                 </div>
               )}
-              {daySeances.length === 0 ? (
+              {competition ? (
+                <div className="mt-1 flex flex-col gap-1">
+                  <CompetitionCardBody competition={competition} />
+                </div>
+              ) : daySeances.length === 0 ? (
                 <p className="text-muted-foreground text-sm">Repos</p>
               ) : (
                 <ul className="mt-1 flex flex-col gap-2">
                   {daySeances.map((s) => {
                     const seanceBlocs = (blocsBySeanceId.get(s.id) ?? []).map(toBlocSeanceInput);
                     const volume = computeSeanceVolume(seanceBlocs, performances, zoneOverrides);
-                    const statut = retourBySeanceId.get(s.id);
+                    const retour = retourBySeanceId.get(s.id);
                     return (
-                      <li key={s.id}>
+                      <li key={s.id} className="flex flex-col gap-1">
+                        <SeanceTypeBar type={s.type} />
                         <Link href={`/mon-plan/seances/${s.id}`} className="flex flex-col">
-                          <span className="font-semibold">{s.titre}</span>
-                          <span className="text-muted-foreground text-sm">
-                            {SEANCE_TYPE_LABELS[s.type]} · {volume.distanceKm} km
-                            {statut && (
+                          <span className="flex items-center gap-1.5 font-semibold">
+                            {s.titre}
+                            <SeanceRpeBadge rpe={retour?.rpe} />
+                          </span>
+                          <span className="flex items-center gap-1.5 text-sm">
+                            <span className="text-muted-foreground">{SEANCE_TYPE_LABELS[s.type]}</span>
+                            <SeanceVolumeLine retour={retour} volumeSeance={volume} />
+                            {retour?.statut && (
                               <>
-                                {" · "}
-                                <span aria-hidden="true">{STATUT_GLYPH[statut]}</span>
-                                <span className="sr-only">{STATUT_LABEL[statut]}</span>
+                                <span aria-hidden="true">{STATUT_GLYPH[retour.statut]}</span>
+                                <span className="sr-only">{STATUT_LABEL[retour.statut]}</span>
                               </>
                             )}
                           </span>
@@ -212,17 +245,21 @@ export default async function AthleteCalendarPage({
         {monthWeeks.map((week) => (
           <div key={format(week[0], "yyyy-MM-dd")} className="grid grid-cols-7 gap-2">
             {week.map((day) => {
-              const { dayStr, daySeances, dayNotes } = daySummary(day);
+              const { dayStr, daySeances, dayNotes, competition } = daySummary(day);
               const inCurrentMonth = format(day, "yyyy-MM") === format(referenceDate, "yyyy-MM");
               return (
                 <div
                   key={dayStr}
                   className={`flex min-h-24 flex-col gap-1 rounded-md border p-2 ${
                     dayStr === today ? "border-primary" : ""
-                  } ${inCurrentMonth ? "" : "opacity-50"}`}
+                  } ${inCurrentMonth ? "" : "opacity-50"} ${
+                    competition ? "bg-foreground text-background" : ""
+                  }`}
                 >
                   <div className="flex items-center justify-between gap-1">
-                    <p className="text-muted-foreground text-xs">{format(day, "dd/MM")}</p>
+                    <p className={`text-xs ${competition ? "opacity-70" : "text-muted-foreground"}`}>
+                      {format(day, "dd/MM")}
+                    </p>
                     <AddNoteButton
                       day={dayStr}
                       athleteId={athlete.id}
@@ -230,7 +267,7 @@ export default async function AthleteCalendarPage({
                       onUpdate={updateNote}
                       onDelete={deleteNote}
                       label="+"
-                      className="text-xs text-muted-foreground"
+                      className={`text-xs ${competition ? "opacity-70" : "text-muted-foreground"}`}
                     />
                   </div>
                   {dayNotes.map((n) => (
@@ -248,28 +285,40 @@ export default async function AthleteCalendarPage({
                       onCreate={createNote}
                       onUpdate={updateNote}
                       onDelete={deleteNote}
+                      variant={competition ? "inverted" : undefined}
                     />
                   ))}
-                  {daySeances.map((s) => {
-                    const statut = retourBySeanceId.get(s.id);
-                    return (
-                      <Link
-                        key={s.id}
-                        href={`/mon-plan/seances/${s.id}`}
-                        className="flex items-center gap-1 rounded bg-muted/50 px-1 py-0.5 text-xs"
-                      >
-                        <span className="truncate font-medium">{s.titre}</span>
-                        {statut && (
-                          <>
-                            <span aria-hidden="true" className="shrink-0">
-                              {STATUT_GLYPH[statut]}
-                            </span>
-                            <span className="sr-only">{STATUT_LABEL[statut]}</span>
-                          </>
-                        )}
-                      </Link>
-                    );
-                  })}
+                  {competition ? (
+                    <CompetitionCardBody competition={competition} />
+                  ) : (
+                    daySeances.map((s) => {
+                      const seanceBlocs = (blocsBySeanceId.get(s.id) ?? []).map(toBlocSeanceInput);
+                      const volume = computeSeanceVolume(seanceBlocs, performances, zoneOverrides);
+                      const retour = retourBySeanceId.get(s.id);
+                      return (
+                        <Link
+                          key={s.id}
+                          href={`/mon-plan/seances/${s.id}`}
+                          className="flex flex-col gap-0.5 rounded bg-muted/50 px-1 py-0.5 text-xs"
+                        >
+                          <SeanceTypeBar type={s.type} />
+                          <span className="flex items-center gap-1">
+                            <span className="min-w-0 flex-1 truncate font-medium">{s.titre}</span>
+                            <SeanceRpeBadge rpe={retour?.rpe} />
+                            {retour?.statut && (
+                              <>
+                                <span aria-hidden="true" className="shrink-0">
+                                  {STATUT_GLYPH[retour.statut]}
+                                </span>
+                                <span className="sr-only">{STATUT_LABEL[retour.statut]}</span>
+                              </>
+                            )}
+                          </span>
+                          <SeanceVolumeLine retour={retour} volumeSeance={volume} />
+                        </Link>
+                      );
+                    })
+                  )}
                 </div>
               );
             })}

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createPerformance, updatePerformance, deletePerformance } from "../actions";
 import {
   DISTANCE_LABELS,
   PERFORMANCE_TYPE_LABELS,
@@ -31,10 +30,24 @@ import {
 const DISTANCE_OPTIONS: DistanceRef[] = ["5k", "10k", "semi", "marathon"];
 const TYPE_OPTIONS: PerformanceType[] = ["reel", "estime", "objectif"];
 
+interface PerformancePayload {
+  distance: DistanceRef;
+  tempsSecondes: number;
+  datePerf: string;
+  type: PerformanceType;
+}
+
+// Shared by the admin fiche and the athlete profil page — the caller
+// provides its own Server Actions (admin's operate on any athleteId,
+// the athlete's own resolve the session's athlete server-side and ignore
+// the athleteId argument), the dialog itself is agnostic to which.
 export function PerformanceDialog({
   athleteId,
   trigger,
   existing,
+  onCreate,
+  onUpdate,
+  onDelete,
 }: {
   athleteId: string;
   trigger: React.ReactElement;
@@ -46,6 +59,13 @@ export function PerformanceDialog({
     datePerf: string;
     type: PerformanceType;
   };
+  onCreate: (athleteId: string, data: PerformancePayload) => Promise<{ error?: string }>;
+  onUpdate: (
+    performanceId: string,
+    athleteId: string,
+    data: PerformancePayload
+  ) => Promise<{ error?: string }>;
+  onDelete: (performanceId: string, athleteId: string) => Promise<{ error?: string }>;
 }) {
   const [open, setOpen] = useState(false);
   const [distance, setDistance] = useState<DistanceRef>(existing?.distance ?? "10k");
@@ -69,8 +89,8 @@ export function PerformanceDialog({
 
     startTransition(async () => {
       const result = existing
-        ? await updatePerformance(existing.id, athleteId, { distance, tempsSecondes, datePerf, type })
-        : await createPerformance(athleteId, { distance, tempsSecondes, datePerf, type });
+        ? await onUpdate(existing.id, athleteId, { distance, tempsSecondes, datePerf, type })
+        : await onCreate(athleteId, { distance, tempsSecondes, datePerf, type });
       if (result.error) {
         setError(result.error);
       } else {
@@ -84,7 +104,7 @@ export function PerformanceDialog({
     if (!window.confirm("Supprimer cette performance ?")) return;
     setError(null);
     startTransition(async () => {
-      const result = await deletePerformance(existing.id, athleteId);
+      const result = await onDelete(existing.id, athleteId);
       if (result.error) {
         setError(result.error);
       } else {

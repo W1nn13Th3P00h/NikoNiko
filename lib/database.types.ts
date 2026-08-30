@@ -229,6 +229,38 @@ export type Database = {
           },
         ]
       }
+      message_athlete: {
+        Row: {
+          athlete_id: string
+          contenu: string
+          created_at: string
+          expediteur: string
+          id: string
+        }
+        Insert: {
+          athlete_id: string
+          contenu: string
+          created_at?: string
+          expediteur?: string
+          id?: string
+        }
+        Update: {
+          athlete_id?: string
+          contenu?: string
+          created_at?: string
+          expediteur?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_athlete_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "athlete"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       note_calendrier: {
         Row: {
           athlete_id: string
