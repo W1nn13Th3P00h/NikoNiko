@@ -14,5 +14,5 @@ export async function resolvePostLoginPath(userId: string): Promise<string> {
     .eq("id", userId)
     .single();
 
-  return profile?.is_admin ? "/admin" : "/mon-plan";
+  return profile?.is_admin ? "/admin" : "/mon-plan/calendrier";
 }

@@ -33,11 +33,19 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { saveAthleteNote } from "./actions";
+import {
+  saveAthleteNote,
+  createPerformance,
+  updatePerformance,
+  deletePerformance,
+  createCompetition,
+  updateCompetition,
+  deleteCompetition,
+} from "./actions";
 import { CredentialsForm } from "./_components/credentials-form";
 import { AthleteInfoForm } from "./_components/athlete-info-form";
-import { PerformanceDialog } from "./_components/performance-dialog";
-import { CompetitionDialog } from "./_components/competition-dialog";
+import { PerformanceDialog } from "@/components/performance-dialog";
+import { CompetitionDialog } from "@/components/competition-dialog";
 import { ZoneManuelleDialog } from "./_components/zone-manuelle-dialog";
 import { DeleteRowButton } from "./_components/delete-row-button";
 
@@ -130,7 +138,13 @@ export default async function AthleteDetailPage({
         <CardHeader>
           <CardTitle>Performances de référence</CardTitle>
           <CardAction>
-            <PerformanceDialog athleteId={athlete.id} trigger={<Button size="sm">+ Ajouter</Button>} />
+            <PerformanceDialog
+              athleteId={athlete.id}
+              trigger={<Button size="sm">+ Ajouter</Button>}
+              onCreate={createPerformance}
+              onUpdate={updatePerformance}
+              onDelete={deletePerformance}
+            />
           </CardAction>
         </CardHeader>
         <CardContent>
@@ -176,6 +190,9 @@ export default async function AthleteDetailPage({
                               datePerf: row.date_perf,
                               type: row.type,
                             }}
+                            onCreate={createPerformance}
+                            onUpdate={updatePerformance}
+                            onDelete={deletePerformance}
                             trigger={
                               <Button variant="ghost" size="sm">
                                 Éditer
@@ -275,7 +292,13 @@ export default async function AthleteDetailPage({
         <CardHeader>
           <CardTitle>Compétitions à venir</CardTitle>
           <CardAction>
-            <CompetitionDialog athleteId={athlete.id} trigger={<Button size="sm">+ Ajouter</Button>} />
+            <CompetitionDialog
+              athleteId={athlete.id}
+              trigger={<Button size="sm">+ Ajouter</Button>}
+              onCreate={createCompetition}
+              onUpdate={updateCompetition}
+              onDelete={deleteCompetition}
+            />
           </CardAction>
         </CardHeader>
         <CardContent>
@@ -305,6 +328,9 @@ export default async function AthleteDetailPage({
                         objectifTexte: c.objectif_texte,
                         priorite: c.priorite,
                       }}
+                      onCreate={createCompetition}
+                      onUpdate={updateCompetition}
+                      onDelete={deleteCompetition}
                       trigger={
                         <Button variant="ghost" size="sm">
                           Éditer

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createCompetition, updateCompetition, deleteCompetition } from "../actions";
 import { formatDurationHMS, parseDurationHMS } from "@/lib/paces";
 import type { Database } from "@/lib/database.types";
 import { Button } from "@/components/ui/button";
@@ -26,10 +25,28 @@ type PrioriteCompetition = Database["public"]["Enums"]["priorite_competition"];
 
 const PRIORITE_OPTIONS: PrioriteCompetition[] = ["A", "B", "C"];
 
+interface CompetitionPayload {
+  nom: string;
+  date: string;
+  lieu: string | null;
+  distance: string;
+  deniveleMetresDplus: number | null;
+  objectifTempsSecondes: number | null;
+  objectifTexte: string | null;
+  priorite: PrioriteCompetition;
+}
+
+// Shared by the admin fiche and the athlete profil page — the caller
+// provides its own Server Actions (admin's operate on any athleteId,
+// the athlete's own resolve the session's athlete server-side and ignore
+// the athleteId argument), the dialog itself is agnostic to which.
 export function CompetitionDialog({
   athleteId,
   trigger,
   existing,
+  onCreate,
+  onUpdate,
+  onDelete,
 }: {
   athleteId: string;
   trigger: React.ReactElement;
@@ -45,6 +62,13 @@ export function CompetitionDialog({
     objectifTexte: string | null;
     priorite: PrioriteCompetition;
   };
+  onCreate: (athleteId: string, data: CompetitionPayload) => Promise<{ error?: string }>;
+  onUpdate: (
+    competitionId: string,
+    athleteId: string,
+    data: CompetitionPayload
+  ) => Promise<{ error?: string }>;
+  onDelete: (competitionId: string, athleteId: string) => Promise<{ error?: string }>;
 }) {
   const [open, setOpen] = useState(false);
   const [nom, setNom] = useState(existing?.nom ?? "");
@@ -98,8 +122,8 @@ export function CompetitionDialog({
 
     startTransition(async () => {
       const result = existing
-        ? await updateCompetition(existing.id, athleteId, payload)
-        : await createCompetition(athleteId, payload);
+        ? await onUpdate(existing.id, athleteId, payload)
+        : await onCreate(athleteId, payload);
       if (result.error) {
         setError(result.error);
       } else {
@@ -113,7 +137,7 @@ export function CompetitionDialog({
     if (!window.confirm(`Supprimer la compétition « ${existing.nom} » ?`)) return;
     setError(null);
     startTransition(async () => {
-      const result = await deleteCompetition(existing.id, athleteId);
+      const result = await onDelete(existing.id, athleteId);
       if (result.error) {
         setError(result.error);
       } else {
