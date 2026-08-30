@@ -1,0 +1,8 @@
+{
+  "skillOverrides": {
+    "speckit-checklist": "off",
+    "speckit-clarify": "off",
+    "speckit-converge": "off",
+    "speckit-taskstoissues": "off"
+  }
+}

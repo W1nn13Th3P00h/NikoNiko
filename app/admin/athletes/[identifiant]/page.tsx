@@ -39,6 +39,7 @@ import { AthleteInfoForm } from "./_components/athlete-info-form";
 import { PerformanceDialog } from "./_components/performance-dialog";
 import { CompetitionDialog } from "./_components/competition-dialog";
 import { ZoneManuelleDialog } from "./_components/zone-manuelle-dialog";
+import { DeleteRowButton } from "./_components/delete-row-button";
 
 const ZONE_ORDER: ZoneAllure[] = [
   "z1_recup",
@@ -165,21 +166,29 @@ export default async function AthleteDetailPage({
                         {isBase && <Badge variant="secondary">Référence retenue</Badge>}
                       </TableCell>
                       <TableCell>
-                        <PerformanceDialog
-                          athleteId={athlete.id}
-                          existing={{
-                            id: row.id,
-                            distance: row.distance,
-                            tempsSecondes: row.temps_secondes,
-                            datePerf: row.date_perf,
-                            type: row.type,
-                          }}
-                          trigger={
-                            <Button variant="ghost" size="sm">
-                              Éditer
-                            </Button>
-                          }
-                        />
+                        <div className="flex items-center gap-2">
+                          <PerformanceDialog
+                            athleteId={athlete.id}
+                            existing={{
+                              id: row.id,
+                              distance: row.distance,
+                              tempsSecondes: row.temps_secondes,
+                              datePerf: row.date_perf,
+                              type: row.type,
+                            }}
+                            trigger={
+                              <Button variant="ghost" size="sm">
+                                Éditer
+                              </Button>
+                            }
+                          />
+                          <DeleteRowButton
+                            kind="performance"
+                            athleteId={athlete.id}
+                            id={row.id}
+                            confirmMessage="Supprimer cette performance ?"
+                          />
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -277,7 +286,9 @@ export default async function AthleteDetailPage({
               {(competitions ?? []).map((c) => (
                 <li key={c.id} className="flex items-center justify-between gap-3">
                   <span>
-                    {c.nom} {c.lieu ? `— ${c.lieu}` : ""}
+                    {c.nom} — {c.distance}
+                    {c.denivele_metres_dplus ? ` (D+${c.denivele_metres_dplus}m)` : ""}
+                    {c.lieu ? ` — ${c.lieu}` : ""}
                   </span>
                   <span className="flex items-center gap-3 text-muted-foreground">
                     {format(new Date(c.date), "dd/MM/yyyy")} ({c.priorite})
@@ -299,6 +310,12 @@ export default async function AthleteDetailPage({
                           Éditer
                         </Button>
                       }
+                    />
+                    <DeleteRowButton
+                      kind="competition"
+                      athleteId={athlete.id}
+                      id={c.id}
+                      confirmMessage={`Supprimer la compétition « ${c.nom} » ?`}
                     />
                   </span>
                 </li>

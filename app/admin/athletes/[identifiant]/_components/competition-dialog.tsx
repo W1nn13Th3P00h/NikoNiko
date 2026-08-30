@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createCompetition, updateCompetition } from "../actions";
+import { createCompetition, updateCompetition, deleteCompetition } from "../actions";
 import { formatDurationHMS, parseDurationHMS } from "@/lib/paces";
 import type { Database } from "@/lib/database.types";
 import { Button } from "@/components/ui/button";
@@ -108,6 +108,20 @@ export function CompetitionDialog({
     });
   }
 
+  function handleDelete() {
+    if (!existing) return;
+    if (!window.confirm(`Supprimer la compétition « ${existing.nom} » ?`)) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await deleteCompetition(existing.id, athleteId);
+      if (result.error) {
+        setError(result.error);
+      } else {
+        setOpen(false);
+      }
+    });
+  }
+
   return (
     <Dialog
       open={open}
@@ -187,9 +201,16 @@ export function CompetitionDialog({
             </div>
           </div>
           {error && <p className="text-destructive text-sm">{error}</p>}
-          <Button onClick={handleSubmit} disabled={isPending} className="self-start">
-            {isPending ? "Enregistrement…" : "Enregistrer"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={handleSubmit} disabled={isPending}>
+              {isPending ? "Enregistrement…" : "Enregistrer"}
+            </Button>
+            {existing && (
+              <Button variant="destructive" onClick={handleDelete} disabled={isPending}>
+                Supprimer
+              </Button>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

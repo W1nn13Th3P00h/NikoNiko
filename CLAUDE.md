@@ -13,10 +13,7 @@ Application privée de suivi de plans d'entraînement en course à pied. Un coac
 
 - Next.js (App Router, TypeScript strict, React Server Components par défaut, Server Actions pour les mutations)
 - Supabase : Postgres + Auth (identifiant + mot de passe) + Row Level Security
-- Tailwind CSS + shadcn/ui
 - date-fns, timezone Europe/Paris, semaines commençant le lundi
-- Vitest pour les tests unitaires
-- Déploiement cible : Netlify (build Next.js via `@netlify/plugin-nextjs`, déclenché sur push vers `main`)
 
 Pas de state manager global tant que le besoin n'est pas prouvé.
 
@@ -84,6 +81,7 @@ supabase/migrations/     migrations SQL (schéma + RLS + seed)
 - **Sélection de la performance de référence** (`lib/paces.ts`) : parmi les performances `reel`, on prend d'abord la distance la plus fiable disponible (5k/10k > semi > marathon), puis la plus récente à fiabilité égale. Un marathon récent ne prime donc pas sur un 10k plus ancien mais plus fiable — la fiche athlète affiche la performance retenue pour que ce soit vérifiable en un coup d'œil.
 - **Zones manuelles** (`zone_manuelle`) : le coach peut surcharger, zone par zone, la valeur calculée (allure et/ou FC indépendamment) — pour les athlètes sans performance de référence exploitable, ou trop novices pour que l'estimation Riegel ait un sens. Une ligne par `(athlete_id, zone)` réellement saisie ; les zones non surchargées retombent sur le calcul automatique. `lib/paces.ts` expose `resolvePaceZones`/`resolveHeartRateZones` (fusion override + calcul, avec un flag `isManual`) et `getAthletePaceZone` accepte les overrides en 3e paramètre — toutes les fonctions qui consomment une zone réelle (volume, aperçu séance, vue athlète) les propagent en plus des performances.
 - **`note_calendrier`** : annotation libre (titre, couleur, texte optionnel) sur un ou plusieurs jours consécutifs (`date_debut`/`date_fin`), distincte de `athlete_note` (un unique bloc de texte coach-only sur la fiche athlète). Affichée identiquement des deux côtés (titre + couleur, cliquable pour éditer) via le composant partagé `components/calendar-note-dialog.tsx`. C'est la seule autre table, avec `retour_seance`, où l'athlète a un accès en écriture (voir Sécurité) — ici sans aucune restriction (le coach comme l'athlète créent/modifient/suppriment librement leurs propres notes).
+- **Distance d'une compétition** (`competition.distance`) : texte libre plutôt que l'enum `distance_ref` — les compétitions réelles du coach (trails avec D+, distances non standards) ne rentrent pas dans 5k/10k/semi/marathon. `denivele_metres_dplus` est un champ optionnel séparé, purement informatif (pas encore consommé par un calcul).
 
 ## Sécurité
 

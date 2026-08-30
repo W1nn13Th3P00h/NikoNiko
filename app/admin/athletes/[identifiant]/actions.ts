@@ -92,6 +92,15 @@ export async function updatePerformance(
   return {};
 }
 
+export async function deletePerformance(performanceId: string, athleteId: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("performance_reference").delete().eq("id", performanceId);
+
+  if (error) return { error: error.message };
+  revalidatePath(`/admin/athletes/${athleteId}`);
+  return {};
+}
+
 export async function createCompetition(
   athleteId: string,
   data: {
@@ -223,6 +232,15 @@ export async function deleteZoneManuelle(athleteId: string, zone: ZoneAllure): P
   if (error) return { error: error.message };
   revalidatePath(`/admin/athletes/${athleteId}`);
   revalidatePath(`/admin/athletes/${athleteId}/calendrier`);
+  return {};
+}
+
+export async function deleteCompetition(competitionId: string, athleteId: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("competition").delete().eq("id", competitionId);
+
+  if (error) return { error: error.message };
+  revalidatePath(`/admin/athletes/${athleteId}`);
   return {};
 }
 
