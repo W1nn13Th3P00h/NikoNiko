@@ -36,7 +36,7 @@ export default async function DashboardPage() {
   const [
     { data: todaySeances },
     { data: nextSeanceRows },
-    { data: competitionA },
+    { data: competitions },
     { data: weekSeances },
     { data: performanceRows },
     { data: zoneManuelleRows },
@@ -60,11 +60,8 @@ export default async function DashboardPage() {
       .from("competition")
       .select("*")
       .eq("athlete_id", athlete.id)
-      .eq("priorite", "A")
       .gte("date", todayStr)
-      .order("date")
-      .limit(1)
-      .maybeSingle(),
+      .order("date"),
     supabase
       .from("seance")
       .select("id, date_prevue")
@@ -110,10 +107,6 @@ export default async function DashboardPage() {
       : { data: [] };
   const weekVolume = computeSeanceVolume((weekBlocs ?? []).map(toBlocSeanceInput), performances, zoneOverrides);
 
-  const daysToCompetition = competitionA
-    ? differenceInCalendarDays(new Date(competitionA.date), today)
-    : null;
-
   const paceZones = resolvePaceZones(performances, zoneOverrides);
   const hasAnyZone = ZONE_ORDER.some((zone) => paceZones[zone].range !== null);
 
@@ -121,15 +114,22 @@ export default async function DashboardPage() {
     <div className="flex flex-col gap-6">
       <p className="text-muted-foreground text-sm">Salut {athlete.prenom} 👋</p>
 
-      {competitionA && daysToCompetition !== null && (
-        <Card>
-          <CardContent className="py-4">
-            <p className="text-muted-foreground text-sm">{competitionA.nom}</p>
-            <p className="text-4xl font-bold">
-              {daysToCompetition === 0 ? "Aujourd'hui !" : `J-${daysToCompetition}`}
-            </p>
-          </CardContent>
-        </Card>
+      {competitions && competitions.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto">
+          {competitions.map((competition) => {
+            const daysToCompetition = differenceInCalendarDays(new Date(competition.date), today);
+            return (
+              <Card key={competition.id} className="shrink-0">
+                <CardContent className="py-4">
+                  <p className="text-muted-foreground text-sm">{competition.nom}</p>
+                  <p className="text-4xl font-bold">
+                    {daysToCompetition === 0 ? "Aujourd'hui !" : `J-${daysToCompetition}`}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       )}
 
       <div>
