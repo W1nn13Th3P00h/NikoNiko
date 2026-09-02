@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import { Pencil } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
@@ -246,9 +247,9 @@ export default async function AthleteDetailPage({
                     <TableCell>
                       {ZONE_LABELS[zone]}
                       {(pace.isManual || hr.isManual) && (
-                        <Badge variant="secondary" className="ml-2">
-                          Manuel
-                        </Badge>
+                        <span className="ml-2 inline-block align-middle" title="Zone modifiée manuellement">
+                          <Pencil className="inline size-3 text-muted-foreground" />
+                        </span>
                       )}
                     </TableCell>
                     <TableCell>

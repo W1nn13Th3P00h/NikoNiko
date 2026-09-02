@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Pencil } from "lucide-react";
 import { differenceInCalendarDays, endOfWeek, format, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 import { redirect } from "next/navigation";
@@ -212,8 +213,12 @@ export default async function DashboardPage() {
                     {pace.range.minSecondsPerKm === null
                       ? `< ${formatPaceSecondsPerKm(pace.range.maxSecondsPerKm)}`
                       : `${formatPaceSecondsPerKm(pace.range.minSecondsPerKm)}–${formatPaceSecondsPerKm(pace.range.maxSecondsPerKm)}`}
-                    {pace.isManual && " (manuel)"}
                   </span>
+                  {pace.isManual && (
+                    <span title="Zone modifiée manuellement">
+                      <Pencil className="size-3 text-muted-foreground" />
+                    </span>
+                  )}
                 </div>
               );
             })}
