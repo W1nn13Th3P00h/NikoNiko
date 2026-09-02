@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signOut } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
+import { BugReportButton } from "@/components/bug-report-button";
 import { createClient } from "@/utils/supabase/server";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -42,11 +43,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </Link>
           </nav>
         </div>
-        <form action={signOut}>
-          <Button type="submit" variant="ghost" size="sm">
-            Se déconnecter
-          </Button>
-        </form>
+        <div className="flex items-center gap-1">
+          <BugReportButton />
+          <form action={signOut}>
+            <Button type="submit" variant="ghost" size="sm">
+              Se déconnecter
+            </Button>
+          </form>
+        </div>
       </header>
       <main className="px-6 py-8">{children}</main>
     </div>
