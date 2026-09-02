@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { addMonths, addWeeks, differenceInCalendarDays, format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { computeSeanceVolume } from "@/lib/volume";
 import { toBlocSeanceInput } from "@/lib/mappers";
 import {
@@ -251,7 +251,8 @@ export function CalendarView({
   }
 
   async function handleDrop(seanceId: string, newDate: string) {
-    await moveSeanceDate(seanceId, newDate);
+    const { error } = await moveSeanceDate(seanceId, newDate);
+    if (error) window.alert(`Échec du déplacement : ${error}`);
   }
 
   async function handleDelete(seanceId: string, titre: string) {
@@ -302,8 +303,12 @@ export function CalendarView({
                     {pace.range.minSecondsPerKm === null
                       ? `< ${formatPaceSecondsPerKm(pace.range.maxSecondsPerKm)}`
                       : `${formatPaceSecondsPerKm(pace.range.minSecondsPerKm)}–${formatPaceSecondsPerKm(pace.range.maxSecondsPerKm)}`}
-                    {pace.isManual && " (manuel)"}
                   </span>
+                  {pace.isManual && (
+                    <span title="Zone modifiée manuellement">
+                      <Pencil className="size-3 text-muted-foreground" />
+                    </span>
+                  )}
                 </div>
               );
             })

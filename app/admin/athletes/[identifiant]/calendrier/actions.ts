@@ -123,8 +123,9 @@ export async function applyLibrarySeance(
 
 export async function moveSeanceDate(seanceId: string, newDate: string) {
   const supabase = await createClient();
-  await supabase.from("seance").update({ date_prevue: newDate }).eq("id", seanceId);
+  const { error } = await supabase.from("seance").update({ date_prevue: newDate }).eq("id", seanceId);
   revalidatePath("/admin", "layout");
+  return { error: error ? error.message : null };
 }
 
 export async function deleteSeance(seanceId: string) {

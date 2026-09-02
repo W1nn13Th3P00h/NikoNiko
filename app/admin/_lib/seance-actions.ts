@@ -79,6 +79,10 @@ export async function saveSeance(
     type: SeanceType;
     objectif: string | null;
     consignes: string | null;
+    // Only present when editing an athlete's occurrence — a library
+    // template's date_prevue must stay null (see the check constraint on
+    // `seance`), so the editor never sends this field for one.
+    datePrevue?: string;
   },
   blocs: DraftBloc[],
   options?: { saveAsLibraryCopy?: boolean }
@@ -92,6 +96,7 @@ export async function saveSeance(
       type: fields.type,
       objectif: fields.objectif,
       consignes: fields.consignes,
+      ...(fields.datePrevue !== undefined ? { date_prevue: fields.datePrevue } : {}),
     })
     .eq("id", seanceId);
 

@@ -113,6 +113,7 @@ export function SeanceEditor({
 
   const [titre, setTitre] = useState(seance.titre);
   const [type, setType] = useState<SeanceType>(seance.type);
+  const [datePrevue, setDatePrevue] = useState(seance.date_prevue ?? "");
   const [objectif, setObjectif] = useState(seance.objectif ?? "");
   const [consignes, setConsignes] = useState(seance.consignes ?? "");
   const [blocs, setBlocs] = useState<DraftBloc[]>(initialBlocs);
@@ -191,6 +192,7 @@ export function SeanceEditor({
             type,
             objectif: objectif.trim() || null,
             consignes: consignes.trim() || null,
+            ...(athlete ? { datePrevue } : {}),
           },
           blocs,
           { saveAsLibraryCopy: allowSaveAsLibraryCopy && saveToLibrary }
@@ -221,7 +223,6 @@ export function SeanceEditor({
         <h1 className="text-2xl font-semibold">Édition de séance</h1>
         <p className="text-muted-foreground text-sm">
           {athlete ? `${athlete.prenom} ${athlete.nom}` : "Bibliothèque"}
-          {seance.date_prevue ? ` — ${seance.date_prevue}` : ""}
         </p>
       </div>
 
@@ -268,6 +269,17 @@ export function SeanceEditor({
                 <Label htmlFor="titre">Titre</Label>
                 <Input id="titre" value={titre} onChange={(e) => setTitre(e.target.value)} />
               </div>
+              {athlete && (
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="date-prevue">Date</Label>
+                  <Input
+                    id="date-prevue"
+                    type="date"
+                    value={datePrevue}
+                    onChange={(e) => setDatePrevue(e.target.value)}
+                  />
+                </div>
+              )}
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="type">Type</Label>
                 <Select value={type} onValueChange={(v) => v && setType(v as SeanceType)} items={SEANCE_TYPE_LABELS}>
