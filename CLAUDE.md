@@ -17,6 +17,10 @@ Application privée de suivi de plans d'entraînement en course à pied. Un coac
 
 Pas de state manager global tant que le besoin n'est pas prouvé.
 
+## Méthode de travail
+
+Pour toute modification, évolution ou correction, présenter un plan avant de démarrer l'implémentation. Attendre validation avant d'écrire du code.
+
 ## Conventions
 
 - Interface entièrement en français, code et commentaires en anglais.
