@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BugReportButton } from "@/components/bug-report-button";
 import { getCurrentAthlete } from "./_lib/current-athlete";
 
 function initials(prenom: string, nom: string): string {
@@ -14,14 +15,17 @@ export default async function MonPlanLayout({ children }: { children: React.Reac
         <span className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
           NikoNiko
         </span>
-        <Link
-          href="/mon-plan/profil"
-          className="flex size-8 items-center justify-center rounded-[4px] bg-primary text-xs font-bold text-primary-foreground"
-          aria-label="Profil"
-          title="Profil"
-        >
-          {athlete ? initials(athlete.prenom, athlete.nom) : "?"}
-        </Link>
+        <div className="flex items-center gap-2">
+          <BugReportButton />
+          <Link
+            href="/mon-plan/profil"
+            className="flex size-8 items-center justify-center rounded-[4px] bg-primary text-xs font-bold text-primary-foreground"
+            aria-label="Profil"
+            title="Profil"
+          >
+            {athlete ? initials(athlete.prenom, athlete.nom) : "?"}
+          </Link>
+        </div>
       </header>
 
       <main className="flex-1 px-6 pt-7 pb-[calc(96px+env(safe-area-inset-bottom))]">{children}</main>
