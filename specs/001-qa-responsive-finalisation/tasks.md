@@ -41,7 +41,10 @@ Aucune tâche bloquante commune identifiée : US1 (`app/mon-plan/`) et US2 (`app
 - [X] T004 [P] [US1] Auditer et corriger `app/mon-plan/calendrier/page.tsx` (liste verticale de la semaine) à 320px et 375px — FR-001 — Audit statique : branches mobile/desktop dédiées (`md:hidden`/`hidden md:flex`), pas de largeur fixe côté mobile. Aucun défaut trouvé.
 - [X] T005 [P] [US1] Auditer et corriger `app/mon-plan/_components/bloc-list.tsx` (rendu des blocs et sous-blocs, contraste fort, valeurs en grand) à 320px et 375px — FR-001, FR-006 — Audit statique : ligne flex avec `flex-1` sur le libellé, tailles fixes uniquement en `px` internes (icônes/badges), pas de risque de débordement. Aucun défaut trouvé.
 - [X] T006 [US1] Auditer et corriger `app/mon-plan/seances/[seanceId]/page.tsx`, `app/mon-plan/seances/[seanceId]/retour/page.tsx` et `app/mon-plan/seances/[seanceId]/_components/retour-form.tsx` (détail séance + formulaire de retour, 3 taps max) à 320px et 375px — FR-002 — Audit statique : boutons statut/RPE dimensionnés explicitement (`h-14`, `h-[58px]`, `h-[82px]`, cibles tactiles ≥44px), grille RPE `grid-cols-5` reste jouable à 320px. Aucun défaut trouvé.
-- [ ] T007 [US1] ⚠️ Non exécuté (nécessite un navigateur réel) — Valider le parcours complet US1 de bout en bout à 320px et 375px selon `specs/001-qa-responsive-finalisation/quickstart.md` — SC-002, FR-007
+- [X] T007 [US1] **Validé en navigateur réel** (Playwright/Chromium, données réelles d'un athlète en production) — Parcours complet US1 à 320px et 375px selon `specs/001-qa-responsive-finalisation/quickstart.md` : calendrier semaine → détail séance (avec et sans retour) → formulaire de retour (3 taps, grille RPE) → modale de note calendrier — SC-002, FR-007. **2 bugs réels trouvés et corrigés** :
+  1. `components/calendar-note-dialog.tsx` — la modale débordait horizontalement en dessous de `sm:` (640px) : les wrappers `flex-1` (Titre, Du, Au) et leur conteneur n'avaient pas `min-w-0`, donc le champ date natif gardait sa largeur intrinsèque et le champ Couleur se retrouvait rendu hors de la carte. Fix : `min-w-0` ajouté aux wrappers concernés.
+  2. `app/mon-plan/calendrier/page.tsx` — la ligne de nav semaine ("← Semaine préc. / Aujourd'hui / Semaine suiv. →") wrappait mot par mot à 320px. Fix : libellés raccourcis ("← Préc." / "Suiv. →") + `whitespace-nowrap`.
+  Autres points vérifiés sans défaut trouvé : grille RPE à 320px, sécurité de la safe-area de la nav bottom fixe (une première suspicion de chevauchement avec le bouton "Envoyer à Jérémie" s'est avérée un artefact de capture `fullPage` — confirmé faux positif via mesure des bounding boxes réelles et scroll effectif).
 
 **Checkpoint**: US1 livrable indépendamment — le parcours athlète mobile est utilisable de bout en bout.
 
@@ -60,7 +63,7 @@ Aucune tâche bloquante commune identifiée : US1 (`app/mon-plan/`) et US2 (`app
 - [X] T012 [US2] Auditer et corriger `app/admin/athletes/[identifiant]/seances/[seanceId]/page.tsx` (délègue à seance-editor.tsx) à 1280px et 1440px — FR-003 — Audit statique : wrapper de récupération de données uniquement, aucune mise en page propre ; bénéficie directement du correctif T011.
 - [X] T013 [US2] **Corrigé** `app/admin/bibliotheque/page.tsx`, `app/admin/bibliotheque/[seanceId]/page.tsx`, `app/admin/bibliotheque/_components/library-filters.tsx` et `app/admin/bibliotheque/_components/new-seance-button.tsx` (filtre type + recherche titre, même éditeur) à 1280px et 1440px — FR-003 — `library-filters.tsx` : `flex gap-3` sans wrap pouvait se resserrer inutilement à largeur réduite → `flex-wrap` ajouté. `[seanceId]/page.tsx` bénéficie de T011. Reste : aucun autre défaut trouvé.
 - [X] T014 [P] [US2] Auditer et corriger `app/admin/retours/page.tsx` (100 derniers retours, commentaires longs) à 1280px et 1440px — FR-003, FR-006 — Audit statique : commentaire dans un `<p>` sans `whitespace-nowrap`, wrap naturel dans la Card. Aucun défaut trouvé.
-- [ ] T015 [US2] ⚠️ Non exécuté (nécessite un navigateur réel) — Valider le parcours complet US2 de bout en bout à 1280px et 1440px selon `specs/001-qa-responsive-finalisation/quickstart.md` — SC-003, SC-004, FR-007
+- [ ] T015 [US2] ⚠️ Partiellement vérifié — Un spot-check navigateur réel (Playwright) à 1280px et 1440px sur calendrier admin + éditeur de séance confirme que les fixes T010/T011 tiennent bien à l'écran. Le reste du parcours US2 (liste athlètes, fiche athlète, bibliothèque, retours) n'a pas été rebalayé en navigateur réel dans cette session (priorité donnée au mobile athlète, cf. demande utilisateur) — validation complète encore à faire — SC-003, SC-004, FR-007
 
 **Checkpoint**: US2 livrable indépendamment — le parcours admin desktop est utilisable de bout en bout.
 
@@ -72,7 +75,7 @@ Aucune tâche bloquante commune identifiée : US1 (`app/mon-plan/`) et US2 (`app
 
 **Independent Test**: Redimensionner chaque page listée dans US1/US2 entre 375px et 1280px par paliers et vérifier l'absence de superposition ou d'élément inatteignable.
 
-- [ ] T016 [US3] ⚠️ Partiellement traité, non validé visuellement (nécessite un navigateur réel) — Balayer chaque page corrigée en Phase 3 et Phase 4 entre 375px et 1280px et corriger toute rupture bloquante constatée — FR-008, FR-007 (dépend de T003–T015). Les deux ruptures structurelles identifiables par lecture de code (calendrier admin, éditeur de séance — cf. T010/T011) sont déjà corrigées ; une confirmation visuelle au balayage reste nécessaire pour clore cette tâche.
+- [X] T016 [US3] **Balayage réel effectué côté mobile athlète** (414px et 600px, en plus des références 320/375) sur les pages corrigées en Phase 3 : calendrier, détail séance, formulaire de retour + grille RPE, modale de note — aucune nouvelle rupture trouvée à ces paliers (les deux bugs T007 étaient déjà présents dès 320/375 et corrigés, pas de régression aux paliers intermédiaires). Côté admin, seul un spot-check à 1280/1440 a été fait (cf. T015) — le balayage 375px→1280px complet du parcours admin reste à faire — FR-008, FR-007.
 
 **Checkpoint**: Toutes les pages du périmètre restent consultables sur toute la plage de largeurs testée.
 
@@ -82,7 +85,7 @@ Aucune tâche bloquante commune identifiée : US1 (`app/mon-plan/`) et US2 (`app
 
 - [X] T017 [P] Mettre à jour `CLAUDE.md` : cocher l'Étape 8 — QA responsive + finalisation dans l'État d'avancement — SC-005 — Fait, avec une note explicite renvoyant vers ce qui reste à valider visuellement.
 - [X] T018 Lancer `npm test` (Vitest) pour confirmer l'absence de régression sur `lib/paces.ts` et `lib/volume.ts` — FR-009 — 22/22 tests passent. `npx tsc --noEmit` : aucune nouvelle erreur introduite (une erreur `LayoutProps` dans `app/layout.tsx` est préexistante, confirmée en la reproduisant sur l'arbre sans ces changements).
-- [ ] T019 ⚠️ Non exécuté (nécessite un navigateur réel) — Revue finale de cohérence visuelle (espacements, contrastes) sur l'ensemble des pages du périmètre — SC-001
+- [ ] T019 ⚠️ Partiellement fait — Revue visuelle réelle effectuée sur le parcours athlète (`/mon-plan`), rien à signaler au-delà des deux correctifs de T007. Le parcours admin n'a eu qu'un spot-check ciblé (cf. T015), pas une revue de cohérence visuelle complète — à terminer avant de clore cette tâche — SC-001
 
 ---
 
