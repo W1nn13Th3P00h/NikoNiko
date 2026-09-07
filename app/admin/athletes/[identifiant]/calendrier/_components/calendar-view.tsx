@@ -58,6 +58,7 @@ interface GridSeance {
   type: SeanceType;
   date_prevue: string | null;
   ordre_dans_journee: number;
+  date_modifiee_par_athlete: boolean;
 }
 
 type BlocRow = Database["public"]["Tables"]["bloc_seance"]["Row"];
@@ -535,6 +536,12 @@ export function CalendarView({
                                   >
                                     {s.titre}
                                   </Link>
+                                  {s.date_modifiee_par_athlete && (
+                                    <span
+                                      title="Date modifiée par l'athlète"
+                                      className="mt-0.5 size-1.5 shrink-0 rounded-full bg-amber-500"
+                                    />
+                                  )}
                                   <button
                                     type="button"
                                     onClick={() => void handleDelete(s.id, s.titre)}

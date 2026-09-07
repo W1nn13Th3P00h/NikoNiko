@@ -33,3 +33,22 @@ export async function submitRetour(
   revalidatePath("/mon-plan");
   revalidatePath("/mon-plan/calendrier");
 }
+
+// RLS (seance_update_self) is the real guard: only the athlete's own
+// occurrences (est_modele = false) can be updated this way. No date-range
+// limit — the athlete is free to reschedule as they see fit.
+export async function updateSeanceDate(seanceId: string, nouvelleDate: string) {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("seance")
+    .update({ date_prevue: nouvelleDate, date_modifiee_par_athlete: true })
+    .eq("id", seanceId);
+
+  if (error) return { error: "Impossible de modifier la date." };
+
+  revalidatePath(`/mon-plan/seances/${seanceId}`);
+  revalidatePath("/mon-plan");
+  revalidatePath("/mon-plan/calendrier");
+  return {};
+}
