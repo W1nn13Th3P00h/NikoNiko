@@ -133,14 +133,14 @@ export default async function AthleteCalendarPage({
       {/* Mobile: single week, vertical list */}
       <div className="flex flex-col gap-2 md:hidden">
         <div className="flex items-center justify-between">
-          <Link href={prevWeekHref} className="text-sm underline">
-            ← Semaine préc.
+          <Link href={prevWeekHref} className="text-sm whitespace-nowrap underline">
+            ← Préc.
           </Link>
-          <Link href={`?date=${today}`} className="text-sm underline">
+          <Link href={`?date=${today}`} className="text-sm whitespace-nowrap underline">
             Aujourd&apos;hui
           </Link>
-          <Link href={nextWeekHref} className="text-sm underline">
-            Semaine suiv. →
+          <Link href={nextWeekHref} className="text-sm whitespace-nowrap underline">
+            Suiv. →
           </Link>
         </div>
 
@@ -220,6 +220,14 @@ export default async function AthleteCalendarPage({
                             )}
                           </span>
                         </Link>
+                        {!retour && dayStr <= today && (
+                          <Link
+                            href={`/mon-plan/seances/${s.id}/retour`}
+                            className="self-start text-xs font-medium text-primary underline"
+                          >
+                            Laisser un retour →
+                          </Link>
+                        )}
                       </li>
                     );
                   })}

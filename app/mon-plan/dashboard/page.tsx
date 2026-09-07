@@ -12,6 +12,7 @@ import { SEANCE_TYPE_LABELS, RPE_LABELS } from "@/lib/labels";
 import { resolvePaceZones, ZONE_SHORT_LABELS, formatPaceSecondsPerKm, type ZoneAllure } from "@/lib/paces";
 import { ZONE_COLORS } from "@/lib/zone-colors";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 const ZONE_ORDER: ZoneAllure[] = [
@@ -40,7 +41,7 @@ export default async function DashboardPage() {
     { data: weekSeances },
     { data: performanceRows },
     { data: zoneManuelleRows },
-    { data: lastRetourRows },
+    { data: lastSeanceRows },
   ] = await Promise.all([
     supabase
       .from("seance")
@@ -78,10 +79,13 @@ export default async function DashboardPage() {
       .select("zone, allure_min_secondes_par_km, allure_max_secondes_par_km, fc_min_bpm, fc_max_bpm")
       .eq("athlete_id", athlete.id),
     supabase
-      .from("retour_seance")
-      .select("rpe, commentaire, statut, seance:seance_id(id, titre, type, date_prevue)")
+      .from("seance")
+      .select("*")
       .eq("athlete_id", athlete.id)
-      .order("created_at", { ascending: false })
+      .eq("est_modele", false)
+      .lte("date_prevue", todayStr)
+      .order("date_prevue", { ascending: false })
+      .order("ordre_dans_journee", { ascending: false })
       .limit(1),
   ]);
 
@@ -89,7 +93,16 @@ export default async function DashboardPage() {
   const zoneOverrides = toZoneManualOverrides(zoneManuelleRows ?? []);
   const isToday = (todaySeances ?? []).length > 0;
   const featuredSeance = isToday ? todaySeances![0] : (nextSeanceRows ?? [])[0] ?? null;
-  const lastRetour = (lastRetourRows ?? [])[0] ?? null;
+  const lastSeance = (lastSeanceRows ?? [])[0] ?? null;
+  let lastRetour = null;
+  if (lastSeance) {
+    const { data } = await supabase
+      .from("retour_seance")
+      .select("rpe, commentaire, statut")
+      .eq("seance_id", lastSeance.id)
+      .maybeSingle();
+    lastRetour = data;
+  }
 
   let featuredVolume = null;
   if (featuredSeance) {
@@ -172,25 +185,31 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {lastRetour && (
+      {lastSeance && (
         <div>
           <h2 className="text-muted-foreground mb-2 text-sm font-semibold uppercase">
             Dernière séance
           </h2>
           <Card>
             <CardContent className="flex flex-col gap-1 py-4">
-              <p className="text-xl font-bold">{lastRetour.seance?.titre}</p>
-              {lastRetour.seance?.type && (
-                <Badge variant="secondary" className="w-fit">
-                  {SEANCE_TYPE_LABELS[lastRetour.seance.type]}
-                </Badge>
+              <p className="text-xl font-bold">{lastSeance.titre}</p>
+              <Badge variant="secondary" className="w-fit">
+                {SEANCE_TYPE_LABELS[lastSeance.type]}
+              </Badge>
+              {lastRetour ? (
+                <>
+                  {lastRetour.rpe && (
+                    <p className="text-muted-foreground">
+                      RPE {lastRetour.rpe} · {RPE_LABELS[lastRetour.rpe]}
+                    </p>
+                  )}
+                  {lastRetour.commentaire && <p>{lastRetour.commentaire}</p>}
+                </>
+              ) : (
+                <Link href={`/mon-plan/seances/${lastSeance.id}/retour`} className="mt-1">
+                  <Button className="w-full">Laisser un retour</Button>
+                </Link>
               )}
-              {lastRetour.rpe && (
-                <p className="text-muted-foreground">
-                  RPE {lastRetour.rpe} · {RPE_LABELS[lastRetour.rpe]}
-                </p>
-              )}
-              {lastRetour.commentaire && <p>{lastRetour.commentaire}</p>}
             </CardContent>
           </Card>
         </div>

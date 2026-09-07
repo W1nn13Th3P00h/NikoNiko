@@ -126,9 +126,9 @@ export function NoteDialog({
         <DialogHeader>
           <DialogTitle>{existing ? "Modifier la note" : "Nouvelle note"}</DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col gap-3">
+        <div className="flex min-w-0 flex-col gap-3">
           <div className="flex gap-3">
-            <div className="flex flex-1 flex-col gap-1.5">
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
               <Label htmlFor="note-titre">Titre</Label>
               <Input id="note-titre" value={titre} onChange={(e) => setTitre(e.target.value)} />
             </div>
@@ -144,7 +144,7 @@ export function NoteDialog({
             </div>
           </div>
           <div className="flex gap-3">
-            <div className="flex flex-1 flex-col gap-1.5">
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
               <Label htmlFor="note-date-debut">Du</Label>
               <Input
                 id="note-date-debut"
@@ -153,7 +153,7 @@ export function NoteDialog({
                 onChange={(e) => setDateDebut(e.target.value)}
               />
             </div>
-            <div className="flex flex-1 flex-col gap-1.5">
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
               <Label htmlFor="note-date-fin">Au</Label>
               <Input
                 id="note-date-fin"
