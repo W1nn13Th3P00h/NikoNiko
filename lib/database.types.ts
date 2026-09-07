@@ -39,6 +39,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      abonnement_push: {
+        Row: {
+          athlete_id: string
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+        }
+        Insert: {
+          athlete_id: string
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+        }
+        Update: {
+          athlete_id?: string
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "abonnement_push_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "athlete"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       athlete: {
         Row: {
           actif: boolean
@@ -51,6 +86,8 @@ export type Database = {
           id: string
           identifiant: string
           nom: string
+          notif_jour_meme_seance: boolean
+          notif_veille_seance: boolean
           prenom: string
         }
         Insert: {
@@ -64,6 +101,8 @@ export type Database = {
           id?: string
           identifiant: string
           nom: string
+          notif_jour_meme_seance?: boolean
+          notif_veille_seance?: boolean
           prenom: string
         }
         Update: {
@@ -77,6 +116,8 @@ export type Database = {
           id?: string
           identifiant?: string
           nom?: string
+          notif_jour_meme_seance?: boolean
+          notif_veille_seance?: boolean
           prenom?: string
         }
         Relationships: []
@@ -358,6 +399,45 @@ export type Database = {
         }
         Relationships: []
       }
+      rappel_seance_envoye: {
+        Row: {
+          athlete_id: string
+          envoye_at: string
+          id: string
+          seance_id: string
+          type: Database["public"]["Enums"]["type_rappel_notification"]
+        }
+        Insert: {
+          athlete_id: string
+          envoye_at?: string
+          id?: string
+          seance_id: string
+          type: Database["public"]["Enums"]["type_rappel_notification"]
+        }
+        Update: {
+          athlete_id?: string
+          envoye_at?: string
+          id?: string
+          seance_id?: string
+          type?: Database["public"]["Enums"]["type_rappel_notification"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rappel_seance_envoye_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "athlete"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rappel_seance_envoye_seance_id_fkey"
+            columns: ["seance_id"]
+            isOneToOne: false
+            referencedRelation: "seance"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       retour_seance: {
         Row: {
           athlete_id: string
@@ -546,6 +626,7 @@ export type Database = {
         | "competition"
         | "test"
         | "cross_training"
+      type_rappel_notification: "veille" | "jour_meme"
     }
     CompositeTypes: {
       [_ in never]: never

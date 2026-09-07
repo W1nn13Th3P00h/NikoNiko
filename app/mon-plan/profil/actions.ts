@@ -214,6 +214,64 @@ export async function deleteOwnCompetition(
   return {};
 }
 
+export async function updateNotificationPreferences(data: {
+  notifVeilleSeance: boolean;
+  notifJourMemeSeance: boolean;
+}): Promise<{ error?: string }> {
+  const athlete = await getCurrentAthlete();
+  if (!athlete) return { error: "Non connecté." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("athlete")
+    .update({
+      notif_veille_seance: data.notifVeilleSeance,
+      notif_jour_meme_seance: data.notifJourMemeSeance,
+    })
+    .eq("id", athlete.id);
+
+  if (error) return { error: error.message };
+  revalidatePath("/mon-plan/profil");
+  return {};
+}
+
+export async function saveOwnPushSubscription(subscription: {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+}): Promise<{ error?: string }> {
+  const athlete = await getCurrentAthlete();
+  if (!athlete) return { error: "Non connecté." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("abonnement_push").upsert(
+    {
+      athlete_id: athlete.id,
+      endpoint: subscription.endpoint,
+      p256dh: subscription.keys.p256dh,
+      auth: subscription.keys.auth,
+    },
+    { onConflict: "endpoint" }
+  );
+
+  if (error) return { error: error.message };
+  return {};
+}
+
+export async function deleteOwnPushSubscription(endpoint: string): Promise<{ error?: string }> {
+  const athlete = await getCurrentAthlete();
+  if (!athlete) return { error: "Non connecté." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("abonnement_push")
+    .delete()
+    .eq("endpoint", endpoint)
+    .eq("athlete_id", athlete.id);
+
+  if (error) return { error: error.message };
+  return {};
+}
+
 export async function sendMessageToAdmin(contenu: string): Promise<{ error?: string }> {
   if (!contenu.trim()) return { error: "Message vide." };
 
