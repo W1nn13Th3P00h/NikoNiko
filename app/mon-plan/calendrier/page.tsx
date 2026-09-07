@@ -220,6 +220,14 @@ export default async function AthleteCalendarPage({
                             )}
                           </span>
                         </Link>
+                        {!retour && dayStr <= today && (
+                          <Link
+                            href={`/mon-plan/seances/${s.id}/retour`}
+                            className="self-start text-xs font-medium text-primary underline"
+                          >
+                            Laisser un retour →
+                          </Link>
+                        )}
                       </li>
                     );
                   })}
