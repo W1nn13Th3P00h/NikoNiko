@@ -9,6 +9,7 @@ import { CompetitionDialog } from "@/components/competition-dialog";
 import { PerformanceDialog } from "@/components/performance-dialog";
 import { signOut } from "@/app/actions/auth";
 import { ProfileForm, PasswordForm } from "./_components/profile-form";
+import { NotificationPreferencesForm } from "./_components/notification-preferences-form";
 import { MessagePanel } from "./_components/message-panel";
 import {
   createOwnCompetition,
@@ -47,6 +48,13 @@ export default async function ProfilPage() {
       />
 
       <PasswordForm />
+
+      <NotificationPreferencesForm
+        initial={{
+          notifVeilleSeance: athlete.notif_veille_seance,
+          notifJourMemeSeance: athlete.notif_jour_meme_seance,
+        }}
+      />
 
       <Card>
         <CardHeader>
