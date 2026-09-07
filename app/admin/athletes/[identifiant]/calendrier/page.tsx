@@ -51,7 +51,7 @@ export default async function AthleteCalendarPage({
     supabase.from("seance").select("id, titre, type").eq("est_modele", true).order("titre"),
     supabase
       .from("seance")
-      .select("id, titre, type, date_prevue, ordre_dans_journee")
+      .select("id, titre, type, date_prevue, ordre_dans_journee, date_modifiee_par_athlete")
       .eq("athlete_id", athlete.id)
       .eq("est_modele", false)
       .gte("date_prevue", gridStartStr)

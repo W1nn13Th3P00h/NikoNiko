@@ -5,6 +5,8 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { getCurrentAthlete } from "@/app/mon-plan/_lib/current-athlete";
 import { BlocList } from "@/app/mon-plan/_components/bloc-list";
+import { EditDateDialog } from "./_components/edit-date-dialog";
+import { updateSeanceDate } from "./actions";
 import { ProfileBar } from "@/components/profile-bar";
 import {
   toBlocDisplayItem,
@@ -79,6 +81,9 @@ export default async function SeanceDetailPage({
           <span className="font-mono text-xs tracking-[0.1em] text-muted-foreground uppercase">
             {format(new Date(seance.date_prevue), "EEEE dd MMMM", { locale: fr })}
           </span>
+        )}
+        {seance.date_prevue && (
+          <EditDateDialog seanceId={seance.id} datePrevue={seance.date_prevue} onUpdate={updateSeanceDate} />
         )}
       </div>
 

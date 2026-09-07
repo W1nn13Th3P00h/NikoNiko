@@ -497,6 +497,7 @@ export type Database = {
           athlete_id: string | null
           consignes: string | null
           created_at: string
+          date_modifiee_par_athlete: boolean
           date_prevue: string | null
           est_modele: boolean
           id: string
@@ -509,6 +510,7 @@ export type Database = {
           athlete_id?: string | null
           consignes?: string | null
           created_at?: string
+          date_modifiee_par_athlete?: boolean
           date_prevue?: string | null
           est_modele?: boolean
           id?: string
@@ -521,6 +523,7 @@ export type Database = {
           athlete_id?: string | null
           consignes?: string | null
           created_at?: string
+          date_modifiee_par_athlete?: boolean
           date_prevue?: string | null
           est_modele?: boolean
           id?: string
