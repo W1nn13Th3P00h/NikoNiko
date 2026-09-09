@@ -14,7 +14,7 @@ export default async function SeanceEditorPage({
 
   const { data: athlete } = await supabase
     .from("athlete")
-    .select("id, prenom, nom")
+    .select("id, prenom, nom, fc_max")
     .eq("identifiant", identifiant)
     .single();
 
