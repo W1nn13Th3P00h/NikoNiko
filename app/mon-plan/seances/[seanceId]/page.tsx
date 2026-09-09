@@ -101,6 +101,7 @@ export default async function SeanceDetailPage({
         blocs={(blocRows ?? []).map(toBlocDisplayItem)}
         performances={performances}
         zoneOverrides={zoneOverrides}
+        fcMax={athlete.fc_max}
       />
 
       {!volume.estimationComplete && (

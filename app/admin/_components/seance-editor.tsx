@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { computeSeanceVolume } from "@/lib/volume";
 import {
   formatPaceSecondsPerKm,
+  getAthleteHeartRateZone,
   getAthletePaceZone,
   ZONE_LABELS,
   type PerformanceReference,
@@ -62,18 +63,24 @@ const ZONE_OPTIONS: ZoneAllure[] = [
   "z6_anaerobie",
 ];
 
-function realPacePreview(
+function realTargetPreview(
   bloc: DraftBloc,
   performances: PerformanceReference[],
-  overrides: ZoneManualOverrides
+  overrides: ZoneManualOverrides,
+  fcMax: number | null
 ): string {
   if (bloc.cibleType === "libre") return "Libre";
   if (bloc.cibleType === "rpe") return `RPE ${bloc.cibleRpe ?? "—"}`;
   if (bloc.cibleType === "allure_absolue") {
     return bloc.cibleAllureSecondesParKm ? formatPaceSecondsPerKm(bloc.cibleAllureSecondesParKm) : "—";
   }
-  // zone_allure / zone_fc
   if (!bloc.cibleZone) return "—";
+  if (bloc.cibleType === "zone_fc") {
+    const result = getAthleteHeartRateZone(bloc.cibleZone, fcMax, overrides);
+    if (!result.available) return `${ZONE_LABELS[bloc.cibleZone]} (pas de référence)`;
+    const { minBpm, maxBpm } = result.range;
+    return `${minBpm} – ${maxBpm} bpm`;
+  }
   const result = getAthletePaceZone(bloc.cibleZone, performances, overrides);
   if (!result.available) return `${ZONE_LABELS[bloc.cibleZone]} (pas de référence)`;
   const { minSecondsPerKm, maxSecondsPerKm } = result.range;
@@ -93,9 +100,9 @@ export function SeanceEditor({
   retour = null,
 }: {
   // Null when editing a library template directly (no athlete context, so
-  // no real pace to preview against — realPacePreview falls back to
+  // no real target to preview against — realTargetPreview falls back to
   // showing the zone name with a "pas de référence" hint).
-  athlete: { id: string; prenom: string; nom: string } | null;
+  athlete: { id: string; prenom: string; nom: string; fc_max: number | null } | null;
   seance: SeanceRow;
   initialBlocs: DraftBloc[];
   performances: PerformanceReference[];
@@ -119,6 +126,8 @@ export function SeanceEditor({
   const [blocs, setBlocs] = useState<DraftBloc[]>(initialBlocs);
   const [saveToLibrary, setSaveToLibrary] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  const fcMax = athlete?.fc_max ?? null;
 
   const topLevelBlocs = blocs.filter((b) => b.parentClientId === null);
   const childrenOf = (parentClientId: string) =>
@@ -317,6 +326,7 @@ export function SeanceEditor({
                     bloc={bloc}
                     performances={performances}
                     zoneOverrides={zoneOverrides}
+                    fcMax={fcMax}
                     onChange={(patch) => updateBloc(bloc.clientId, patch)}
                     onRemove={() => {
                       const childCount = childrenOf(bloc.clientId).length;
@@ -340,6 +350,7 @@ export function SeanceEditor({
                         bloc={child}
                         performances={performances}
                         zoneOverrides={zoneOverrides}
+                        fcMax={fcMax}
                         onChange={(patch) => updateBloc(child.clientId, patch)}
                         onRemove={() => removeBloc(child.clientId)}
                         onDuplicate={() => duplicateBloc(child.clientId)}
@@ -378,6 +389,7 @@ export function SeanceEditor({
               blocs={blocs.map(draftToBlocDisplayItem)}
               performances={performances}
               zoneOverrides={zoneOverrides}
+              fcMax={fcMax}
             />
 
             {!volume.estimationComplete && (
@@ -444,6 +456,7 @@ function BlocRowEditor({
   bloc,
   performances,
   zoneOverrides,
+  fcMax,
   onChange,
   onRemove,
   onDuplicate,
@@ -453,6 +466,7 @@ function BlocRowEditor({
   bloc: DraftBloc;
   performances: PerformanceReference[];
   zoneOverrides: ZoneManualOverrides;
+  fcMax: number | null;
   onChange: (patch: Partial<DraftBloc>) => void;
   onRemove: () => void;
   onDuplicate: () => void;
@@ -633,7 +647,7 @@ function BlocRowEditor({
         </div>
       </div>
       <p className="text-muted-foreground text-xs">
-        Allure réelle de l&apos;athlète : {realPacePreview(bloc, performances, zoneOverrides)}
+        Cible réelle de l&apos;athlète : {realTargetPreview(bloc, performances, zoneOverrides, fcMax)}
       </p>
     </div>
   );

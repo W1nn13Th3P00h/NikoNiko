@@ -35,6 +35,10 @@ export type PaceZoneResult =
   | { available: true; zone: ZoneAllure; range: PaceRange }
   | { available: false; zone: ZoneAllure };
 
+export type HeartRateZoneResult =
+  | { available: true; zone: ZoneAllure; range: HeartRateRange }
+  | { available: false; zone: ZoneAllure };
+
 /**
  * Coach-entered replacement for one zone's computed bounds — for athletes
  * with no usable reference performance, or too novice for the Riegel
@@ -274,6 +278,20 @@ export function getAthletePaceZone(
   overrides: ZoneManualOverrides = {}
 ): PaceZoneResult {
   const resolved = resolvePaceZones(performances, overrides)[zone];
+  if (!resolved.range) return { available: false, zone };
+  return { available: true, zone, range: resolved.range };
+}
+
+/**
+ * Resolves one athlete's real heart-rate range for a given zone. Same
+ * never-throws contract as getAthletePaceZone.
+ */
+export function getAthleteHeartRateZone(
+  zone: ZoneAllure,
+  fcMax: number | null,
+  overrides: ZoneManualOverrides = {}
+): HeartRateZoneResult {
+  const resolved = resolveHeartRateZones(fcMax, overrides)[zone];
   if (!resolved.range) return { available: false, zone };
   return { available: true, zone, range: resolved.range };
 }
