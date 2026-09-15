@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { LibraryFilters } from "./_components/library-filters";
 import { NewSeanceButton } from "./_components/new-seance-button";
 import { DeleteSeanceButton } from "./_components/delete-seance-button";
+import { DuplicateSeanceButton } from "./_components/duplicate-seance-button";
 
 type SeanceType = Database["public"]["Enums"]["seance_type"];
 
@@ -92,6 +93,7 @@ export default async function BibliothequePage({
                       <span className="text-muted-foreground text-sm">
                         {countBySeance.get(s.id) ?? 0} bloc(s)
                       </span>
+                      <DuplicateSeanceButton seanceId={s.id} titre={s.titre} />
                       <DeleteSeanceButton seanceId={s.id} titre={s.titre} />
                     </div>
                   </CardContent>
