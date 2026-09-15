@@ -3,26 +3,9 @@
 import { addDays, differenceInCalendarDays, format } from "date-fns";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
-import type { Database } from "@/lib/database.types";
+import { copyBlocTree } from "@/app/admin/_lib/copy-blocs";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
-type BlocRow = Database["public"]["Tables"]["bloc_seance"]["Row"];
-
-function blocInsertFields(row: BlocRow) {
-  return {
-    ordre: row.ordre,
-    role: row.role,
-    repetitions: row.repetitions,
-    mode_duree: row.mode_duree,
-    distance_metres: row.distance_metres,
-    duree_secondes: row.duree_secondes,
-    cible_type: row.cible_type,
-    cible_zone: row.cible_zone,
-    cible_allure_secondes_par_km: row.cible_allure_secondes_par_km,
-    cible_rpe: row.cible_rpe,
-    commentaire: row.commentaire,
-  };
-}
 
 // Copies a séance (library template or another athlete's occurrence) plus
 // its whole bloc tree onto a target athlete/date. A library séance applied
@@ -34,14 +17,14 @@ async function copySeanceWithBlocs(
   targetAthleteId: string,
   targetDate: string
 ) {
-  const { data: source } = await supabase
+  const { data: source, error: sourceError } = await supabase
     .from("seance")
     .select("titre, type, objectif, consignes, ordre_dans_journee")
     .eq("id", sourceSeanceId)
     .single();
-  if (!source) return;
+  if (sourceError || !source) throw new Error(sourceError?.message ?? "Séance source introuvable");
 
-  const { data: newSeance } = await supabase
+  const { data: newSeance, error: insertError } = await supabase
     .from("seance")
     .insert({
       titre: source.titre,
@@ -55,39 +38,9 @@ async function copySeanceWithBlocs(
     })
     .select("id")
     .single();
-  if (!newSeance) return;
+  if (insertError || !newSeance) throw new Error(insertError?.message ?? "Échec de la création de la séance");
 
-  const { data: blocs } = await supabase
-    .from("bloc_seance")
-    .select("*")
-    .eq("seance_id", sourceSeanceId)
-    .order("ordre");
-  if (!blocs || blocs.length === 0) return;
-
-  const topLevel = blocs.filter((b) => b.parent_bloc_id === null);
-  const children = blocs.filter((b) => b.parent_bloc_id !== null);
-
-  // Sequential inserts (not a single bulk insert): we need each top-level
-  // bloc's generated id before inserting its children, and row order isn't
-  // guaranteed to match input order on a multi-row INSERT ... RETURNING.
-  const idMap = new Map<string, string>();
-  for (const bloc of topLevel) {
-    const { data: inserted } = await supabase
-      .from("bloc_seance")
-      .insert({ ...blocInsertFields(bloc), seance_id: newSeance.id, parent_bloc_id: null })
-      .select("id")
-      .single();
-    if (inserted) idMap.set(bloc.id, inserted.id);
-  }
-
-  for (const bloc of children) {
-    const newParentId = bloc.parent_bloc_id ? idMap.get(bloc.parent_bloc_id) : null;
-    await supabase.from("bloc_seance").insert({
-      ...blocInsertFields(bloc),
-      seance_id: newSeance.id,
-      parent_bloc_id: newParentId ?? null,
-    });
-  }
+  await copyBlocTree(supabase, sourceSeanceId, newSeance.id);
 }
 
 // Creates a placeholder séance with no blocs yet; the coach immediately

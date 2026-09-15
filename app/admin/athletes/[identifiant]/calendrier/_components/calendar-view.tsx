@@ -686,8 +686,12 @@ function AddSeanceDialog({
           <form
             action={async () => {
               if (!date || !selectedLibraryId) return;
-              await applyLibrarySeance(athleteId, date, selectedLibraryId);
-              onOpenChange(false);
+              try {
+                await applyLibrarySeance(athleteId, date, selectedLibraryId);
+                onOpenChange(false);
+              } catch {
+                window.alert("Échec de l'ajout de la séance, réessaie.");
+              }
             }}
             className="flex flex-col gap-3"
           >
@@ -772,8 +776,12 @@ function DuplicateWeekDialog({
             const diffToMonday = day === 0 ? -6 : 1 - day;
             target.setDate(target.getDate() + diffToMonday);
             const targetWeekStart = format(target, "yyyy-MM-dd");
-            await duplicateWeek(sourceAthleteId, weekStart, targetAthleteId, targetWeekStart);
-            onOpenChange(false);
+            try {
+              await duplicateWeek(sourceAthleteId, weekStart, targetAthleteId, targetWeekStart);
+              onOpenChange(false);
+            } catch {
+              window.alert("Échec de la duplication de la semaine, réessaie.");
+            }
           }}
           className="flex flex-col gap-3"
         >

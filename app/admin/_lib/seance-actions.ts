@@ -13,17 +13,22 @@ type SeanceType = Database["public"]["Enums"]["seance_type"];
 // editing alone, and it sidesteps tracking which blocs were added, moved,
 // or removed since the last save.
 async function replaceBlocs(supabase: SupabaseServerClient, seanceId: string, blocs: DraftBloc[]) {
-  await supabase.from("bloc_seance").delete().eq("seance_id", seanceId);
+  const { error: deleteError } = await supabase.from("bloc_seance").delete().eq("seance_id", seanceId);
+  if (deleteError) throw new Error(deleteError.message);
   if (blocs.length === 0) return;
 
   const topLevel = blocs.filter((b) => b.parentClientId === null);
   const children = blocs.filter((b) => b.parentClientId !== null);
 
+  // Every insert error is thrown rather than swallowed: a swallowed error
+  // here previously let a whole bloc (and, for a parent, its children —
+  // see the `if (!parentId) continue` below) silently disappear on save,
+  // with the coach seeing "Enregistrement…" succeed with no error at all.
   const idMap = new Map<string, string>();
   let ordre = 0;
   for (const b of topLevel) {
     ordre += 1;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("bloc_seance")
       .insert({
         seance_id: seanceId,
@@ -42,15 +47,16 @@ async function replaceBlocs(supabase: SupabaseServerClient, seanceId: string, bl
       })
       .select("id")
       .single();
-    if (data) idMap.set(b.clientId, data.id);
+    if (error || !data) throw new Error(error?.message ?? "Échec de l'enregistrement d'un bloc");
+    idMap.set(b.clientId, data.id);
   }
 
   let childOrdre = 0;
   for (const b of children) {
     childOrdre += 1;
     const parentId = b.parentClientId ? idMap.get(b.parentClientId) : null;
-    if (!parentId) continue;
-    await supabase.from("bloc_seance").insert({
+    if (!parentId) throw new Error("Bloc parent introuvable pour un sous-bloc");
+    const { error } = await supabase.from("bloc_seance").insert({
       seance_id: seanceId,
       parent_bloc_id: parentId,
       ordre: childOrdre,
@@ -65,6 +71,7 @@ async function replaceBlocs(supabase: SupabaseServerClient, seanceId: string, bl
       cible_rpe: b.cibleRpe,
       commentaire: b.commentaire,
     });
+    if (error) throw new Error(error.message);
   }
 }
 
@@ -89,7 +96,7 @@ export async function saveSeance(
 ) {
   const supabase = await createClient();
 
-  await supabase
+  const { error: updateError } = await supabase
     .from("seance")
     .update({
       titre: fields.titre,
@@ -99,11 +106,12 @@ export async function saveSeance(
       ...(fields.datePrevue !== undefined ? { date_prevue: fields.datePrevue } : {}),
     })
     .eq("id", seanceId);
+  if (updateError) throw new Error(updateError.message);
 
   await replaceBlocs(supabase, seanceId, blocs);
 
   if (options?.saveAsLibraryCopy) {
-    const { data: librarySeance } = await supabase
+    const { data: librarySeance, error: libraryError } = await supabase
       .from("seance")
       .insert({
         titre: fields.titre,
@@ -114,10 +122,9 @@ export async function saveSeance(
       })
       .select("id")
       .single();
+    if (libraryError || !librarySeance) throw new Error(libraryError?.message ?? "Échec de la copie en bibliothèque");
 
-    if (librarySeance) {
-      await replaceBlocs(supabase, librarySeance.id, blocs);
-    }
+    await replaceBlocs(supabase, librarySeance.id, blocs);
   }
 
   revalidatePath("/admin", "layout");
