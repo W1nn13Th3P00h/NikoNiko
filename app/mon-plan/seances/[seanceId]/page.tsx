@@ -8,6 +8,7 @@ import { BlocList } from "@/app/mon-plan/_components/bloc-list";
 import { EditDateDialog } from "./_components/edit-date-dialog";
 import { updateSeanceDate } from "./actions";
 import { ProfileBar } from "@/components/profile-bar";
+import { ExportSeanceButton } from "@/components/export-seance-button";
 import {
   toBlocDisplayItem,
   toBlocSeanceInput,
@@ -15,6 +16,7 @@ import {
   toZoneManualOverrides,
 } from "@/lib/mappers";
 import { computeSeanceVolume } from "@/lib/volume";
+import { seanceIsExportable } from "@/lib/fit-export";
 import { computeProfileSegments } from "@/lib/profile-bar";
 import { computeCharge } from "@/lib/charge";
 import { nowInParis } from "@/lib/date";
@@ -87,12 +89,18 @@ export default async function SeanceDetailPage({
         )}
       </div>
 
-      <div className="flex flex-col gap-2">
-        <h1 className="text-[34px] leading-[1.05] font-bold tracking-tight">{seance.titre}</h1>
-        <p className="font-mono text-sm font-medium text-[#3D4B50]">
-          {volume.distanceKm} km · {volume.dureeMinutes} min
-          {charge !== null ? ` · charge estimée ${charge}` : ""}
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-[34px] leading-[1.05] font-bold tracking-tight">{seance.titre}</h1>
+          <p className="font-mono text-sm font-medium text-[#3D4B50]">
+            {volume.distanceKm} km · {volume.dureeMinutes} min
+            {charge !== null ? ` · charge estimée ${charge}` : ""}
+          </p>
+        </div>
+        <ExportSeanceButton
+          exportUrl={`/mon-plan/seances/${seance.id}/export`}
+          exportable={seanceIsExportable(blocInputs)}
+        />
       </div>
 
       <ProfileBar segments={segments} />
