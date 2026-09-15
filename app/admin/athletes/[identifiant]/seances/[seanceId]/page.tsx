@@ -53,6 +53,7 @@ export default async function SeanceEditorPage({
       redirectPath={`/admin/athletes/${identifiant}/calendrier`}
       allowSaveAsLibraryCopy
       retour={retour ?? null}
+      exportUrl={`/admin/athletes/${identifiant}/seances/${seanceId}/export`}
     />
   );
 }

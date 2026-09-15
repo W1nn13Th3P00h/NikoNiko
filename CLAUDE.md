@@ -40,6 +40,7 @@ app/                    routes (App Router)
     athletes/[identifiant]/ fiche athlète (zones calculées, perfs, compétitions, notes)
       calendrier/          vue mois/semaine, drag and drop, ajout (bibliothèque/custom), duplication de semaine
       seances/[seanceId]/  page fine : charge la séance de CET athlète, délègue à _components/seance-editor.tsx
+        export/route.ts     GET : génère le .fit de cette séance (voir lib/fit-export.ts), même contrat que côté athlète
     bibliotheque/          liste filtrable (type, recherche titre) des séances est_modele=true
       [seanceId]/           édition directe d'une séance de bibliothèque (même éditeur, sans athlète/allures réelles)
     retours/                liste chronologique de tous les retours (100 derniers)
@@ -50,13 +51,16 @@ app/                    routes (App Router)
     page.tsx               accueil : séance du jour ou prochaine séance, countdown compét. A, volume de la semaine
     calendrier/            lecture seule pour les séances (liste verticale semaine mobile / grille mois desktop via CSS) ; les notes de calendrier, elles, sont éditables ici (voir note_calendrier ci-dessous)
     seances/[seanceId]/    détail (blocs en clair, allures réelles) + formulaire de retour (3 taps max)
+      export/route.ts       GET : génère le .fit de cette séance pour l'athlète courant (voir lib/fit-export.ts)
     _lib/current-athlete.ts résout la session vers la ligne athlete (auth_user_id)
     _components/bloc-list.tsx rendu lecture seule des blocs, contraste fort / valeurs en grand
 components/ui/          composants shadcn/ui
 components/calendar-note-dialog.tsx  NoteDialog/NoteChip/AddNoteButton — partagés entre le calendrier admin et /mon-plan/calendrier, actions passées en props (le composant ignore lequel des deux actions.ts les fournit)
+components/export-seance-button.tsx  bouton "Exporter" (.fit) + aide contextuelle Apple Watch/Suunto, partagé entre /mon-plan et l'éditeur admin
 lib/
   paces.ts              calcul des zones d'allure et de FC (Riegel + config des coefficients)
   volume.ts             calcul du volume (distance/durée) d'une séance à partir de ses blocs
+  fit-export.ts           génère un fichier .fit (workout structuré) à partir des blocs d'une séance, via @garmin/fitsdk — voir specs/002-export-seance-fit/data-model.md pour le détail du mapping bloc -> étape
   mappers.ts             conversion lignes Supabase (snake_case) -> types lib/paces, lib/volume
   date.ts                nowInParis() : "aujourd'hui" ancré Europe/Paris, jamais new Date() nu
   labels.ts               labels français pour les enums bruts sans lib dédiée (ex: seance_type)
@@ -64,6 +68,7 @@ lib/
   auth-destination.ts      résout où rediriger après connexion (/admin ou /mon-plan) selon profile.is_admin
   paces.test.ts
   volume.test.ts
+  fit-export.test.ts
 utils/supabase/
   client.ts              client Supabase navigateur
   server.ts               client Supabase Server Components / Server Actions
@@ -79,7 +84,7 @@ supabase/migrations/     migrations SQL (schéma + RLS + seed)
 - **`bloc_seance`** est la brique centrale. Un bloc peut avoir des sous-blocs via `parent_bloc_id` auto-référent (profondeur max 2), pour représenter par ex. "6 x (400m Z5 + 1min récup)".
 - **`type` de `seance`** inclut `cross_training` en plus de l'enum initial (endurance, seuil, vma, fractionne_court, fractionne_long, cote, sortie_longue, allure_specifique, recuperation, renforcement, repos, competition, test) — pour couvrir les séances hors course (vélo, escalade...) observées dans les plans réels du coach. Pour ce type, les blocs restent en `mode_duree = libre` et `cible_type = libre` : pas de champ supplémentaire au schéma.
 - **`cible_rpe`** reste un entier unique 1-10 (pas de min/max). Le coach note parfois "RE 6/7" sur le papier, mais ça se résout en une seule valeur saisie (ex: 7), pas une plage stockée.
-- **Contrainte export FIT (post-V1)** : chaque colonne de `bloc_seance` est pensée pour être traduisible directement en étape de workout FIT (type d'étape, condition de fin en durée/distance, cible en allure ou FC avec bornes). Aucune donnée structurante en texte libre. Voir [README.md](./README.md).
+- **Contrainte export FIT** : chaque colonne de `bloc_seance` est pensée pour être traduisible directement en étape de workout FIT (type d'étape, condition de fin en durée/distance, cible en allure ou FC avec bornes). Aucune donnée structurante en texte libre. Voir [README.md](./README.md). Concrétisé dans `lib/fit-export.ts` (export manuel .fit, voir Étape 9 ci-dessous) : la profondeur max 2 des sous-blocs s'est avérée correspondre exactement au niveau de nesting que le format FIT supporte nativement (étape "repeat" référençant une plage d'étapes, elle-même pouvant contenir une étape "repeat").
 - **Zones d'allure et de FC** : logique isolée dans `lib/paces.ts`, coefficients dans un objet de config exporté et documenté (ajustable sans relire la logique). Formule de Riegel pour les équivalences entre distances, performance réelle la plus récente comme base, 5k/10k préférés au marathon pour estimer le seuil.
 - **Volume d'une séance** : calculé automatiquement depuis les blocs (distance totale estimée en km, durée totale en minutes), avec conversion temps ↔ distance dans les deux sens via l'allure cible de l'athlète (milieu de la zone visée). Logique isolée dans `lib/volume.ts`. Un flag `estimationComplete` redescend à `false` quand un bloc visait une zone d'allure/FC mais que l'athlète n'a aucune performance de référence — pas quand la cible est `libre`/`rpe`, ce qui est un cas normal.
 - **Sélection de la performance de référence** (`lib/paces.ts`) : parmi les performances `reel`, on prend d'abord la distance la plus fiable disponible (5k/10k > semi > marathon), puis la plus récente à fiabilité égale. Un marathon récent ne prime donc pas sur un 10k plus ancien mais plus fiable — la fiche athlète affiche la performance retenue pour que ce soit vérifiable en un coup d'œil.
@@ -102,7 +107,7 @@ supabase/migrations/     migrations SQL (schéma + RLS + seed)
 
 ## Hors périmètre V1
 
-Import Strava/Garmin, notifications, export FIT effectif, multi-coach, graphiques de charge dans le temps, application native. Le modèle de données ne doit pas fermer la porte à ces usages (voir contrainte export FIT ci-dessus).
+Import Strava/Garmin, notifications, multi-coach, graphiques de charge dans le temps, application native. L'export `.fit` (Étape 9) reste manuel (téléchargement) et sans intégration API tierce (pas de push direct vers Suunto/Garmin/TrainingPeaks). Le modèle de données ne doit pas fermer la porte à ces usages (voir contrainte export FIT ci-dessus).
 
 ## État d'avancement
 
@@ -116,6 +121,7 @@ Import Strava/Garmin, notifications, export FIT effectif, multi-coach, graphique
 - [x] Étape 7 — Athlète (`/mon-plan`)
 - [x] Étape 8 — QA responsive + finalisation (page d'accueil, `error.tsx`/`not-found.tsx`/`robots.ts`, safe-area iOS sur la nav mobile, confirmations et retours d'erreur sur les actions destructrices ou fire-and-forget, états vides manquants, petites incohérences de fuseau horaire et d'accessibilité)
 (spec-kit `specs/001-qa-responsive-finalisation/`). Audit statique initial : 2 bugs réels corrigés (calendrier admin sans protection de débordement horizontal ; aperçu live de l'éditeur de séance en largeur fixe qui poussait l'éditeur hors écran sous ~1050px) + 1 amélioration mineure (filtres bibliothèque). Session suivante — validation en navigateur réel (Playwright), focus mobile athlète : parcours `/mon-plan` entièrement revalidé à 320/375/414/600px, 2 nouveaux bugs réels trouvés et corrigés (modale de note calendrier qui débordait sous `sm:`, faute de `min-w-0` sur les wrappers `flex-1` ; wrap disgracieux de la nav semaine à 320px). Reste à faire : balayage navigateur réel complet du parcours admin (T015/T016/T019 de `tasks.md` encore partiels) avant de considérer cette étape définitivement close.
+- [x] Étape 9 — Export de séance vers device (spec-kit `specs/002-export-seance-fit/`, branche `export-seance`). Téléchargement manuel d'un fichier `.fit` par séance, depuis `/mon-plan/seances/[seanceId]` (athlète) et l'éditeur admin (coach) — génération à la volée via `lib/fit-export.ts` (`@garmin/fitsdk`), aucune persistance ni intégration API tierce. Périmètre de vérification V1 : Apple Watch (via une app tierce type WatchFit/Watchletic) et Suunto (via un pont type intervals.icu), avec l'aide contextuelle correspondante affichée au moment du téléchargement (`components/export-seance-button.tsx`). Garmin/Coros non vérifiés cette itération mais très probablement déjà compatibles avec le même fichier. Reste à faire : validation manuelle réelle sur les deux devices prioritaires (voir `specs/002-export-seance-fit/quickstart.md`), non automatisable.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

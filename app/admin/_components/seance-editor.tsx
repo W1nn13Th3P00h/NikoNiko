@@ -21,7 +21,9 @@ import {
 } from "@/lib/labels";
 import type { Database } from "@/lib/database.types";
 import { computeProfileSegments } from "@/lib/profile-bar";
+import { seanceIsExportable } from "@/lib/fit-export";
 import { ProfileBar } from "@/components/profile-bar";
+import { ExportSeanceButton } from "@/components/export-seance-button";
 import { BlocList } from "@/app/mon-plan/_components/bloc-list";
 import {
   type DraftBloc,
@@ -98,6 +100,7 @@ export function SeanceEditor({
   redirectPath,
   allowSaveAsLibraryCopy,
   retour = null,
+  exportUrl,
 }: {
   // Null when editing a library template directly (no athlete context, so
   // no real target to preview against — realTargetPreview falls back to
@@ -112,6 +115,10 @@ export function SeanceEditor({
   // The athlete's own retour on this séance, read-only here — only they
   // can submit or edit it (see app/mon-plan/seances/[seanceId]).
   retour?: RetourRow | null;
+  // Only the athlete-assigned seance page passes this (no real zones to
+  // export for a library template without an athlete) — exports the last
+  // *saved* version of the séance, not the in-progress draft below.
+  exportUrl?: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -228,11 +235,16 @@ export function SeanceEditor({
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 pb-24">
-      <div>
-        <h1 className="text-2xl font-semibold">Édition de séance</h1>
-        <p className="text-muted-foreground text-sm">
-          {athlete ? `${athlete.prenom} ${athlete.nom}` : "Bibliothèque"}
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">Édition de séance</h1>
+          <p className="text-muted-foreground text-sm">
+            {athlete ? `${athlete.prenom} ${athlete.nom}` : "Bibliothèque"}
+          </p>
+        </div>
+        {exportUrl && (
+          <ExportSeanceButton exportUrl={exportUrl} exportable={seanceIsExportable(initialBlocs)} />
+        )}
       </div>
 
       <div className="flex flex-col items-start gap-8 lg:flex-row">
