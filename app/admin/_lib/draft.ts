@@ -44,6 +44,31 @@ export function blankBloc(parentClientId: string | null): DraftBloc {
   };
 }
 
+/**
+ * A bloc with sub-blocs is a pure container: only its repetitions (plus
+ * role/commentaire, which don't feed any calculation) mean anything. Its
+ * own duration/target would otherwise be counted on top of its children in
+ * the volume and exported as an extra step before each FIT repeat.
+ */
+export function asContainer(bloc: DraftBloc): DraftBloc {
+  return {
+    ...bloc,
+    modeDuree: "libre",
+    distanceMetres: null,
+    dureeSecondes: null,
+    cibleType: "libre",
+    cibleZone: null,
+    cibleAllureSecondesParKm: null,
+    cibleRpe: null,
+  };
+}
+
+/** Enforces asContainer() on every bloc that has at least one sub-bloc. */
+export function normalizeContainers(blocs: DraftBloc[]): DraftBloc[] {
+  const parentIds = new Set(blocs.map((b) => b.parentClientId).filter((id) => id !== null));
+  return blocs.map((b) => (parentIds.has(b.clientId) ? asContainer(b) : b));
+}
+
 /** Resets the fields the DB CHECK constraints require for each mode_duree. */
 export function applyModeDureeDefaults(bloc: DraftBloc, modeDuree: ModeDuree): DraftBloc {
   if (modeDuree === "distance") {
