@@ -9,7 +9,7 @@ import {
   type PerformanceReference,
   type ZoneManualOverrides,
 } from "@/lib/paces";
-import { ZONE_COLORS } from "@/lib/zone-colors";
+import { blocColor } from "@/lib/zone-colors";
 
 function formatEffort(bloc: BlocDisplayItem): string {
   if (bloc.modeDuree === "distance" && bloc.distanceMetres) {
@@ -30,7 +30,8 @@ function formatCible(
   fcMax: number | null
 ): string {
   if (bloc.cibleType === "libre") return "";
-  if (bloc.cibleType === "rpe") return bloc.cibleRpe ? `RPE ${bloc.cibleRpe}` : "";
+  // Shown as a badge on the left instead, like zones.
+  if (bloc.cibleType === "rpe") return "";
   if (bloc.cibleType === "allure_absolue") {
     return bloc.cibleAllureSecondesParKm
       ? formatPaceSecondsPerKm(bloc.cibleAllureSecondesParKm)
@@ -62,7 +63,7 @@ function BlocRowView({
   zoneOverrides: ZoneManualOverrides;
   fcMax: number | null;
 }) {
-  const bg = bloc.cibleZone ? ZONE_COLORS[bloc.cibleZone] : "var(--muted)";
+  const bg = blocColor(bloc);
   const label = `${BLOC_ROLE_LABELS[bloc.role]}${
     bloc.role === "corps" ? "" : ` ${formatEffort(bloc)}`
   }`;
@@ -75,6 +76,11 @@ function BlocRowView({
       {bloc.cibleZone && (
         <span className="rounded-[2px] bg-white/60 px-[7px] py-1 text-[10px] font-bold tracking-[0.09em] uppercase">
           {ZONE_SHORT_LABELS[bloc.cibleZone]}
+        </span>
+      )}
+      {bloc.cibleType === "rpe" && bloc.cibleRpe !== null && (
+        <span className="rounded-[2px] bg-white/60 px-[7px] py-1 text-[10px] font-bold tracking-[0.09em] uppercase">
+          RPE {bloc.cibleRpe}
         </span>
       )}
       <span className="flex-1 text-base font-semibold">

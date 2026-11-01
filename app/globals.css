@@ -57,6 +57,19 @@
   --color-zone-4: #d97706;
   --color-zone-5: #dc2626;
   --color-zone-6: #8b1538;
+
+  /* RPE 1-10 -> couleur, même palette que les zones pour qu'un RPE et une
+     zone d'intensité comparable se lisent pareil (voir lib/zone-colors.ts). */
+  --color-rpe-1: #e3e8ee;
+  --color-rpe-2: #d6dee7;
+  --color-rpe-3: #b3d0e3;
+  --color-rpe-4: #8fc1de;
+  --color-rpe-5: #c9a227;
+  --color-rpe-6: #d38c17;
+  --color-rpe-7: #d97706;
+  --color-rpe-8: #dc2626;
+  --color-rpe-9: #b21d30;
+  --color-rpe-10: #8b1538;
 }
 
 :root {

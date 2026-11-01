@@ -141,7 +141,7 @@ export function SeanceEditor({
     blocs.filter((b) => b.parentClientId === parentClientId);
 
   const volume = computeSeanceVolume(blocs.map(draftToBlocSeanceInput), performances, zoneOverrides);
-  const segments = computeProfileSegments(blocs.map(draftToBlocSeanceInput), performances, zoneOverrides);
+  const segments = computeProfileSegments(blocs.map(draftToBlocDisplayItem), performances, zoneOverrides);
 
   function updateBloc(clientId: string, patch: Partial<DraftBloc>) {
     setBlocs((prev) => prev.map((b) => (b.clientId === clientId ? { ...b, ...patch } : b)));
