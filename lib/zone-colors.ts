@@ -44,10 +44,26 @@ export function seanceTypeColor(type: SeanceType): string {
   return zone ? ZONE_COLORS[zone] : "var(--muted-foreground)";
 }
 
-/** RPE 1-10 -> color, same palette as the zones (tokens in globals.css). */
+// RPE 1-10 -> color, same palette as the zones (tokens in globals.css).
+// Each var name must appear literally: Tailwind v4 only emits the @theme
+// variables it finds in source files, so a template like
+// `var(--color-rpe-${n})` leaves every one of them out of the CSS.
+const RPE_COLORS = [
+  "var(--color-rpe-1)",
+  "var(--color-rpe-2)",
+  "var(--color-rpe-3)",
+  "var(--color-rpe-4)",
+  "var(--color-rpe-5)",
+  "var(--color-rpe-6)",
+  "var(--color-rpe-7)",
+  "var(--color-rpe-8)",
+  "var(--color-rpe-9)",
+  "var(--color-rpe-10)",
+] as const;
+
 export function rpeColor(rpe: number): string {
   const level = Math.min(10, Math.max(1, Math.round(rpe)));
-  return `var(--color-rpe-${level})`;
+  return RPE_COLORS[level - 1];
 }
 
 /** Dark text stays readable up to RPE 7; the red/bordeaux end needs white. */
