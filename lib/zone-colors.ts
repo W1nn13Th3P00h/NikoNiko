@@ -4,6 +4,7 @@
 
 import type { ZoneAllure } from "./paces";
 import type { Database } from "./database.types";
+import type { BlocSeanceInput } from "./volume";
 
 type SeanceType = Database["public"]["Enums"]["seance_type"];
 
@@ -41,4 +42,25 @@ export const SEANCE_TYPE_ZONE: Record<SeanceType, ZoneAllure | null> = {
 export function seanceTypeColor(type: SeanceType): string {
   const zone = SEANCE_TYPE_ZONE[type];
   return zone ? ZONE_COLORS[zone] : "var(--muted-foreground)";
+}
+
+/** RPE 1-10 -> color, same palette as the zones (tokens in globals.css). */
+export function rpeColor(rpe: number): string {
+  const level = Math.min(10, Math.max(1, Math.round(rpe)));
+  return `var(--color-rpe-${level})`;
+}
+
+/** Dark text stays readable up to RPE 7; the red/bordeaux end needs white. */
+export function rpeTextColor(rpe: number): string {
+  return rpe >= 8 ? "#ffffff" : "var(--foreground)";
+}
+
+export type ColorableBloc = Pick<BlocSeanceInput, "cibleType" | "cibleZone"> & {
+  cibleRpe: number | null;
+};
+
+export function blocColor(bloc: ColorableBloc): string {
+  if (bloc.cibleZone) return ZONE_COLORS[bloc.cibleZone];
+  if (bloc.cibleType === "rpe" && bloc.cibleRpe !== null) return rpeColor(bloc.cibleRpe);
+  return "var(--muted)";
 }

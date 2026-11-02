@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import type { Database } from "@/lib/database.types";
-import type { DraftBloc } from "./draft";
+import { normalizeContainers, type DraftBloc } from "./draft";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 type SeanceType = Database["public"]["Enums"]["seance_type"];
@@ -12,7 +12,8 @@ type SeanceType = Database["public"]["Enums"]["seance_type"];
 // individual bloc changes: simplest correct approach for a single coach
 // editing alone, and it sidesteps tracking which blocs were added, moved,
 // or removed since the last save.
-async function replaceBlocs(supabase: SupabaseServerClient, seanceId: string, blocs: DraftBloc[]) {
+async function replaceBlocs(supabase: SupabaseServerClient, seanceId: string, draftBlocs: DraftBloc[]) {
+  const blocs = normalizeContainers(draftBlocs);
   const { error: deleteError } = await supabase.from("bloc_seance").delete().eq("seance_id", seanceId);
   if (deleteError) throw new Error(deleteError.message);
   if (blocs.length === 0) return;

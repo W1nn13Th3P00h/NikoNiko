@@ -1,5 +1,5 @@
 import { formatDurationHMS } from "@/lib/paces";
-import { seanceTypeColor } from "@/lib/zone-colors";
+import { rpeColor, rpeTextColor, seanceTypeColor } from "@/lib/zone-colors";
 import type { Database } from "@/lib/database.types";
 
 type SeanceType = Database["public"]["Enums"]["seance_type"];
@@ -35,7 +35,10 @@ export function SeanceTypeBar({ type }: { type: SeanceType }) {
 export function SeanceRpeBadge({ rpe }: { rpe: number | null | undefined }) {
   if (!rpe) return null;
   return (
-    <span className="flex size-[18px] shrink-0 items-center justify-center rounded-full border bg-card text-[10px] font-bold">
+    <span
+      className="flex size-[18px] shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
+      style={{ backgroundColor: rpeColor(rpe), color: rpeTextColor(rpe) }}
+    >
       {rpe}
     </span>
   );

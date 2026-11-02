@@ -32,6 +32,7 @@ import {
   type CibleType,
   applyCibleTypeDefaults,
   applyModeDureeDefaults,
+  asContainer,
   blankBloc,
   draftToBlocDisplayItem,
   draftToBlocSeanceInput,
@@ -141,7 +142,7 @@ export function SeanceEditor({
     blocs.filter((b) => b.parentClientId === parentClientId);
 
   const volume = computeSeanceVolume(blocs.map(draftToBlocSeanceInput), performances, zoneOverrides);
-  const segments = computeProfileSegments(blocs.map(draftToBlocSeanceInput), performances, zoneOverrides);
+  const segments = computeProfileSegments(blocs.map(draftToBlocDisplayItem), performances, zoneOverrides);
 
   function updateBloc(clientId: string, patch: Partial<DraftBloc>) {
     setBlocs((prev) => prev.map((b) => (b.clientId === clientId ? { ...b, ...patch } : b)));
@@ -152,7 +153,26 @@ export function SeanceEditor({
   }
 
   function addChildBloc(parentClientId: string) {
-    setBlocs((prev) => [...prev, blankBloc(parentClientId)]);
+    setBlocs((prev) => {
+      const isFirstChild = !prev.some((b) => b.parentClientId === parentClientId);
+      if (!isFirstChild) return [...prev, blankBloc(parentClientId)];
+
+      // The parent becomes a container: its own duration/target move to the
+      // first sub-bloc instead of being lost ("6 x 400m Z5" -> "6 x (400m Z5)").
+      const parent = prev.find((b) => b.clientId === parentClientId);
+      if (!parent) return prev;
+      const firstChild: DraftBloc = {
+        ...blankBloc(parentClientId),
+        modeDuree: parent.modeDuree,
+        distanceMetres: parent.distanceMetres,
+        dureeSecondes: parent.dureeSecondes,
+        cibleType: parent.cibleType,
+        cibleZone: parent.cibleZone,
+        cibleAllureSecondesParKm: parent.cibleAllureSecondesParKm,
+        cibleRpe: parent.cibleRpe,
+      };
+      return [...prev.map((b) => (b.clientId === parentClientId ? asContainer(b) : b)), firstChild];
+    });
   }
 
   function removeBloc(clientId: string) {
@@ -336,6 +356,7 @@ export function SeanceEditor({
                 <div key={bloc.clientId} className="flex flex-col gap-2 rounded-md border p-3">
                   <BlocRowEditor
                     bloc={bloc}
+                    isContainer={childrenOf(bloc.clientId).length > 0}
                     performances={performances}
                     zoneOverrides={zoneOverrides}
                     fcMax={fcMax}
@@ -466,6 +487,7 @@ export function SeanceEditor({
 
 function BlocRowEditor({
   bloc,
+  isContainer = false,
   performances,
   zoneOverrides,
   fcMax,
@@ -476,6 +498,7 @@ function BlocRowEditor({
   onMoveDown,
 }: {
   bloc: DraftBloc;
+  isContainer?: boolean;
   performances: PerformanceReference[];
   zoneOverrides: ZoneManualOverrides;
   fcMax: number | null;
@@ -515,119 +538,124 @@ function BlocRowEditor({
           />
         </div>
 
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs">Mode</Label>
-          <Select
-            value={bloc.modeDuree}
-            onValueChange={(v) => v && onChange(applyModeDureeDefaults(bloc, v as ModeDuree))}
-            items={MODE_DUREE_LABELS}
-          >
-            <SelectTrigger size="sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(MODE_DUREE_LABELS).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {bloc.modeDuree === "distance" && (
+        {/* A container's volume comes only from its sub-blocs (see asContainer). */}
+        {!isContainer && (
+          <>
           <div className="flex flex-col gap-1">
-            <Label className="text-xs">Distance (m)</Label>
-            <Input
-              type="number"
-              min={1}
-              value={bloc.distanceMetres ?? ""}
-              onChange={(e) => onChange({ distanceMetres: Number(e.target.value) || null })}
-              className="w-24"
-            />
-          </div>
-        )}
-
-        {(bloc.modeDuree === "temps" || bloc.modeDuree === "libre") && (
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs">Durée (s)</Label>
-            <Input
-              type="number"
-              min={0}
-              value={bloc.dureeSecondes ?? ""}
-              onChange={(e) => onChange({ dureeSecondes: Number(e.target.value) || null })}
-              className="w-24"
-            />
-          </div>
-        )}
-
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs">Cible</Label>
-          <Select
-            value={bloc.cibleType}
-            onValueChange={(v) => v && onChange(applyCibleTypeDefaults(bloc, v as CibleType))}
-            items={CIBLE_TYPE_LABELS}
-          >
-            <SelectTrigger size="sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(CIBLE_TYPE_LABELS).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {(bloc.cibleType === "zone_allure" || bloc.cibleType === "zone_fc") && (
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs">Zone</Label>
+            <Label className="text-xs">Mode</Label>
             <Select
-              value={bloc.cibleZone ?? "z2_endurance"}
-              onValueChange={(v) => v && onChange({ cibleZone: v as ZoneAllure })}
-              items={ZONE_LABELS}
+              value={bloc.modeDuree}
+              onValueChange={(v) => v && onChange(applyModeDureeDefaults(bloc, v as ModeDuree))}
+              items={MODE_DUREE_LABELS}
             >
               <SelectTrigger size="sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {ZONE_OPTIONS.map((z) => (
-                  <SelectItem key={z} value={z}>
-                    {ZONE_LABELS[z]}
+                {Object.entries(MODE_DUREE_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-        )}
 
-        {bloc.cibleType === "allure_absolue" && (
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs">Allure (s/km)</Label>
-            <Input
-              type="number"
-              min={1}
-              value={bloc.cibleAllureSecondesParKm ?? ""}
-              onChange={(e) => onChange({ cibleAllureSecondesParKm: Number(e.target.value) || null })}
-              className="w-24"
-            />
-          </div>
-        )}
+          {bloc.modeDuree === "distance" && (
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs">Distance (m)</Label>
+              <Input
+                type="number"
+                min={1}
+                value={bloc.distanceMetres ?? ""}
+                onChange={(e) => onChange({ distanceMetres: Number(e.target.value) || null })}
+                className="w-24"
+              />
+            </div>
+          )}
 
-        {bloc.cibleType === "rpe" && (
+          {(bloc.modeDuree === "temps" || bloc.modeDuree === "libre") && (
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs">Durée (s)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={bloc.dureeSecondes ?? ""}
+                onChange={(e) => onChange({ dureeSecondes: Number(e.target.value) || null })}
+                className="w-24"
+              />
+            </div>
+          )}
+
           <div className="flex flex-col gap-1">
-            <Label className="text-xs">RPE (1-10)</Label>
-            <Input
-              type="number"
-              min={1}
-              max={10}
-              value={bloc.cibleRpe ?? ""}
-              onChange={(e) => onChange({ cibleRpe: Number(e.target.value) || null })}
-              className="w-20"
-            />
+            <Label className="text-xs">Cible</Label>
+            <Select
+              value={bloc.cibleType}
+              onValueChange={(v) => v && onChange(applyCibleTypeDefaults(bloc, v as CibleType))}
+              items={CIBLE_TYPE_LABELS}
+            >
+              <SelectTrigger size="sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(CIBLE_TYPE_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+
+          {(bloc.cibleType === "zone_allure" || bloc.cibleType === "zone_fc") && (
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs">Zone</Label>
+              <Select
+                value={bloc.cibleZone ?? "z2_endurance"}
+                onValueChange={(v) => v && onChange({ cibleZone: v as ZoneAllure })}
+                items={ZONE_LABELS}
+              >
+                <SelectTrigger size="sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ZONE_OPTIONS.map((z) => (
+                    <SelectItem key={z} value={z}>
+                      {ZONE_LABELS[z]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {bloc.cibleType === "allure_absolue" && (
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs">Allure (s/km)</Label>
+              <Input
+                type="number"
+                min={1}
+                value={bloc.cibleAllureSecondesParKm ?? ""}
+                onChange={(e) => onChange({ cibleAllureSecondesParKm: Number(e.target.value) || null })}
+                className="w-24"
+              />
+            </div>
+          )}
+
+          {bloc.cibleType === "rpe" && (
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs">RPE (1-10)</Label>
+              <Input
+                type="number"
+                min={1}
+                max={10}
+                value={bloc.cibleRpe ?? ""}
+                onChange={(e) => onChange({ cibleRpe: Number(e.target.value) || null })}
+                className="w-20"
+              />
+            </div>
+          )}
+          </>
         )}
 
         <div className="flex flex-col gap-1">

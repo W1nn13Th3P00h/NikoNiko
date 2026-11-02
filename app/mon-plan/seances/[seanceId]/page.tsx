@@ -65,7 +65,11 @@ export default async function SeanceDetailPage({
   const zoneOverrides = toZoneManualOverrides(zoneManuelleRows ?? []);
   const blocInputs = (blocRows ?? []).map(toBlocSeanceInput);
   const volume = computeSeanceVolume(blocInputs, performances, zoneOverrides);
-  const segments = computeProfileSegments(blocInputs, performances, zoneOverrides);
+  const segments = computeProfileSegments(
+    (blocRows ?? []).map(toBlocDisplayItem),
+    performances,
+    zoneOverrides
+  );
   const charge = retour?.rpe ? computeCharge(volume.dureeMinutes, retour.rpe) : null;
 
   const todayStr = format(nowInParis(), "yyyy-MM-dd");
