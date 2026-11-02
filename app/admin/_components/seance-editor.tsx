@@ -529,13 +529,7 @@ function BlocRowEditor({
 
         <div className="flex flex-col gap-1">
           <Label className="text-xs">Répétitions</Label>
-          <Input
-            type="number"
-            min={1}
-            value={bloc.repetitions}
-            onChange={(e) => onChange({ repetitions: Math.max(1, Number(e.target.value) || 1) })}
-            className="w-20"
-          />
+          <RepetitionsInput value={bloc.repetitions} onChange={(repetitions) => onChange({ repetitions })} />
         </div>
 
         {/* A container's volume comes only from its sub-blocs (see asContainer). */}
@@ -690,5 +684,30 @@ function BlocRowEditor({
         Cible réelle de l&apos;athlète : {realTargetPreview(bloc, performances, zoneOverrides, fcMax)}
       </p>
     </div>
+  );
+}
+
+/**
+ * Lets the field be emptied while typing (to replace "1" by "16"): the raw
+ * text lives here and only valid integers >= 1 reach the bloc. On blur, an
+ * empty or invalid entry falls back to the last valid value.
+ */
+function RepetitionsInput({ value, onChange }: { value: number; onChange: (value: number) => void }) {
+  // null = not being edited, display the bloc's value.
+  const [text, setText] = useState<string | null>(null);
+
+  return (
+    <Input
+      type="number"
+      min={1}
+      value={text ?? value}
+      onChange={(e) => {
+        setText(e.target.value);
+        const parsed = Number(e.target.value);
+        if (Number.isInteger(parsed) && parsed >= 1) onChange(parsed);
+      }}
+      onBlur={() => setText(null)}
+      className="w-20"
+    />
   );
 }
